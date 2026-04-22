@@ -2,51 +2,46 @@ const backendStatusEl = document.getElementById("backend-status");
 const analysisStatusEl = document.getElementById("analysis-status");
 const refreshBtn = document.getElementById("refresh-btn");
 
-async function fetchBackendHealth() {
-  try {
-    const response = await fetch("http://localhost:8000/health");
-    const data = await response.json();
+// Constantes pour les statuts et classes
+const STATUS = Object.freeze({
+  OK: 'OK',
+  ERROR: 'Erreur',
+  PENDING: 'Inconnu',
+  LOADING: 'Chargement...'
+});
 
-    if (data.status === "ok") {
-      backendStatusEl.textContent = "OK";
-      backendStatusEl.className = "status ok";
-    } else {
-      backendStatusEl.textContent = "Inconnu";
-      backendStatusEl.className = "status pending";
-    }
-  } catch (error) {
-    backendStatusEl.textContent = "Erreur";
-    backendStatusEl.className = "status error";
-  }
+const CLASS = Object.freeze({
+  OK: 'status ok',
+  ERROR: 'status error',
+  PENDING: 'status pending',
+  LOADING: 'status pending'
+});
+
+// Fonction pour mettre à jour le statut d'un élément
+function updateStatus(element, statusKey) {
+  element.textContent = STATUS[statusKey];
+  element.className = CLASS[statusKey];
 }
 
-async function fetchAnalysisHealth() {
+// Fonction générique pour vérifier la santé
+async function fetchHealth(url, element, checkStatus) {
+  updateStatus(element, 'LOADING');
   try {
-    const response = await fetch("http://localhost:8000/analysis/health");
+    const response = await fetch(url);
     const data = await response.json();
-
-    if (data.analysis && data.analysis.status === "ok") {
-      analysisStatusEl.textContent = "OK";
-      analysisStatusEl.className = "status ok";
-    } else {
-      analysisStatusEl.textContent = "Inconnu";
-      analysisStatusEl.className = "status pending";
-    }
+    const statusKey = checkStatus(data) ? 'OK' : 'PENDING';
+    updateStatus(element, statusKey);
   } catch (error) {
-    analysisStatusEl.textContent = "Erreur";
-    analysisStatusEl.className = "status error";
+    updateStatus(element, 'ERROR');
   }
 }
 
 async function refreshStatuses() {
-  backendStatusEl.textContent = "Chargement...";
-  backendStatusEl.className = "status pending";
+  updateStatus(backendStatusEl, 'LOADING');
+  updateStatus(analysisStatusEl, 'LOADING');
 
-  analysisStatusEl.textContent = "Chargement...";
-  analysisStatusEl.className = "status pending";
-
-  await fetchBackendHealth();
-  await fetchAnalysisHealth();
+  await fetchHealth("http://localhost:8000/health", backendStatusEl, data => data.status === "ok");
+  await fetchHealth("http://localhost:8000/analysis/health", analysisStatusEl, data => data.analysis && data.analysis.status === "ok");
 }
 
 refreshBtn.addEventListener("click", refreshStatuses);

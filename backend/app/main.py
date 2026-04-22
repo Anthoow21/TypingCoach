@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.routes import router
 import requests
 import os
 
@@ -12,6 +13,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(router)
 
 ANALYSIS_URL = os.getenv("ANALYSIS_SERVICE_URL", "http://analysis:8080")
 

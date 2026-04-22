@@ -1,0 +1,51 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+    container_name: typing_frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - typing_network
+
+  backend:
+    build:
+      context: ./backend
+    container_name: typing_backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - analysis
+    environment:
+      DATABASE_URL: postgresql://typing_user:typing_password@db:5432/typing_db
+      ANALYSIS_SERVICE_URL: http://analysis:8080
+    networks:
+      - typing_network
+
+  analysis:
+    build:
+      context: ./analysis
+    container_name: typing_analysis
+    ports:
+      - "8080:8080"
+    networks:
+      - typing_network
+
+  db:
+    image: postgres:16
+    container_name: typing_db
+    environment:
+      POSTGRES_USER: typing_user
+      POSTGRES_PASSWORD: typing_password
+      POSTGRES_DB: typing_db
+    ports:
+      - "5432:5432"
+    networks:
+      - typing_network
+
+networks:
+  typing_network:
+    driver: bridge

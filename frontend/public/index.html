@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Typing Coach</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Typing Coach</h1>
+    <p class="subtitle">Frontend Node.js + Express</p>
+
+    <section class="card">
+      <h2>État des services</h2>
+
+      <div class="status-row">
+        <span>Frontend Express</span>
+        <span id="frontend-status" class="status ok">OK</span>
+      </div>
+
+      <div class="status-row">
+        <span>Backend Python</span>
+        <span id="backend-status" class="status pending">Chargement...</span>
+      </div>
+
+      <div class="status-row">
+        <span>Service d’analyse Rust</span>
+        <span id="analysis-status" class="status pending">Chargement...</span>
+      </div>
+
+      <button id="refresh-btn">Rafraîchir les statuts</button>
+    </section>
+
+    <section class="card">
+      <h2>Prototype du projet</h2>
+      <p>
+        Cette interface servira ensuite pour :
+      </p>
+      <ul>
+        <li>le test de dactylographie,</li>
+        <li>l’analyse des fautes,</li>
+        <li>le suivi des performances,</li>
+        <li>les recommandations personnalisées.</li>
+      </ul>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,10 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes import router
-import requests
-import os
 
-app = FastAPI()
+from app.api.router import api_router
+from app.core.database import Base, engine
+from app.models import Exercise, TypingResult, TypingSession
+
+app = FastAPI(title="Typing Coach Backend")
 
 app.add_middleware(
     CORSMiddleware,
@@ -14,15 +15,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router)
+Base.metadata.create_all(bind=engine)
 
-ANALYSIS_URL = os.getenv("ANALYSIS_SERVICE_URL", "http://analysis:8080")
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
-@app.get("/analysis/health")
-def analysis_health():
-    r = requests.get(f"{ANALYSIS_URL}/health")
-    return {"analysis": r.json()}
+app.include_router(api_router)

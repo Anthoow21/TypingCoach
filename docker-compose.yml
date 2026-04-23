@@ -17,8 +17,10 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - db
-      - analysis
+      db:
+        condition: service_healthy
+      analysis:
+        condition: service_started
     environment:
       DATABASE_URL: postgresql://typing_user:typing_password@db:5432/typing_db
       ANALYSIS_SERVICE_URL: http://analysis:8080
@@ -45,6 +47,11 @@ services:
       - "5432:5432"
     networks:
       - typing_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U typing_user -d typing_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 networks:
   typing_network:

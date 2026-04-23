@@ -1,31 +1,19 @@
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.analysis_client.client import analyze_typing
 from app.core.database import get_db
+from app.models.detailed_analysis import DetailedAnalysis
 from app.models.exercise import Exercise
 from app.models.result import TypingResult
 from app.models.session import TypingSession
+from app.schemas.analysis import AnalyzeRequest
 from app.schemas.result import ResultResponse
-from app.schemas.session import SessionCreate, SessionComplete, SessionResponse
+from app.schemas.session import SessionComplete, SessionCreate, SessionResponse
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
-
-
-def compute_wpm(typed_text: str, duration_seconds: float) -> float:
-    if duration_seconds <= 0:
-        return 0.0
-    words_typed = len(typed_text) / 5
-    minutes = duration_seconds / 60
-    return round(words_typed / minutes, 2)
-
-
-def compute_accuracy(reference_text: str, typed_text: str, error_count: int) -> float:
-    reference_length = max(len(reference_text), 1)
-    accuracy = ((reference_length - error_count) / reference_length) * 100
-    accuracy = max(0.0, min(100.0, accuracy))
-    return round(accuracy, 2)
 
 
 @router.post("/start", response_model=SessionResponse)
@@ -58,20 +46,35 @@ def complete_session(session_id: int, payload: SessionComplete, db: Session = De
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found")
 
-    wpm = compute_wpm(payload.typed_text, payload.duration_seconds)
-    accuracy = compute_accuracy(exercise.content, payload.typed_text, payload.error_count)
+    analysis_request = AnalyzeRequest(
+        reference_text=exercise.content,
+        typed_text=payload.typed_text,
+        duration_seconds=payload.duration_seconds,
+        error_count=payload.error_count
+    )
+
+    try:
+        analysis_data = analyze_typing(analysis_request)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Analysis service unavailable: {exc}")
 
     result = TypingResult(
         session_id=session.id,
-        wpm=wpm,
-        accuracy=accuracy,
-        error_count=payload.error_count
+        wpm=analysis_data["wpm"],
+        accuracy=analysis_data["accuracy"],
+        error_count=analysis_data["error_count"]
+    )
+
+    detailed_analysis = DetailedAnalysis(
+        session_id=session.id,
+        analysis_payload=analysis_data
     )
 
     session.status = "completed"
     session.ended_at = datetime.now(UTC)
 
     db.add(result)
+    db.add(detailed_analysis)
     db.commit()
     db.refresh(result)
 

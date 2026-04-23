@@ -1,39 +1,53 @@
 const API_BASE_URL = "http://localhost:8000";
 
 const state = {
+  theme: localStorage.getItem("typing-theme") || "light",
+  exerciseMode: "text",
   exercises: [],
   selectedExercise: null,
   currentSessionId: null,
-  sessionStartedAt: null,
+  currentReferenceText: "",
   timerInterval: null,
-  theme: localStorage.getItem("typing-theme") || "dark"
+  sessionStartedAt: null,
+  lockedErrorIndex: null,
+  errorPositions: new Set(),
+  typedHistory: []
 };
 
 const els = {
-  backendStatus: document.getElementById("backend-status"),
-  analysisStatus: document.getElementById("analysis-status"),
   themeToggle: document.getElementById("theme-toggle"),
   themeLabel: document.getElementById("theme-label"),
 
-  exerciseSelect: document.getElementById("exercise-select"),
-  refreshExercisesBtn: document.getElementById("refresh-exercises-btn"),
-  createExerciseBtn: document.getElementById("create-exercise-btn"),
-  startSessionBtn: document.getElementById("start-session-btn"),
+  tabText: document.getElementById("tab-text"),
+  tabWordList: document.getElementById("tab-word-list"),
+  textForm: document.getElementById("text-form"),
+  wordListForm: document.getElementById("word-list-form"),
+
+  textExerciseContent: document.getElementById("text-exercise-content"),
+  textExerciseLanguage: document.getElementById("text-exercise-language"),
+  textExerciseDifficulty: document.getElementById("text-exercise-difficulty"),
+  createTextExerciseBtn: document.getElementById("create-text-exercise-btn"),
+
+  wordListContent: document.getElementById("word-list-content"),
+  wordListLanguage: document.getElementById("word-list-language"),
+  wordListDifficulty: document.getElementById("word-list-difficulty"),
+  createWordListExerciseBtn: document.getElementById("create-word-list-exercise-btn"),
 
   userName: document.getElementById("user-name"),
-  newExerciseContent: document.getElementById("new-exercise-content"),
-  newExerciseLanguage: document.getElementById("new-exercise-language"),
-  newExerciseDifficulty: document.getElementById("new-exercise-difficulty"),
-
-  referenceText: document.getElementById("reference-text"),
-  typedText: document.getElementById("typed-text"),
-  completeSessionBtn: document.getElementById("complete-session-btn"),
+  exerciseSelect: document.getElementById("exercise-select"),
+  wordCountField: document.getElementById("word-count-field"),
+  wordCountSelect: document.getElementById("word-count-select"),
+  refreshExercisesBtn: document.getElementById("refresh-exercises-btn"),
+  startSessionBtn: document.getElementById("start-session-btn"),
   resetSessionBtn: document.getElementById("reset-session-btn"),
 
-  timerLabel: document.getElementById("timer-label"),
   sessionIdLabel: document.getElementById("session-id-label"),
+  timerLabel: document.getElementById("timer-label"),
+  referenceTextRender: document.getElementById("reference-text-render"),
+  typingInput: document.getElementById("typing-input"),
+
   liveCharCount: document.getElementById("live-char-count"),
-  liveWordCount: document.getElementById("live-word-count"),
+  liveProgress: document.getElementById("live-progress"),
   liveErrorCount: document.getElementById("live-error-count"),
 
   resultWpm: document.getElementById("result-wpm"),
@@ -68,61 +82,137 @@ function secondsSince(startDate) {
   return (Date.now() - startDate.getTime()) / 1000;
 }
 
-function estimateErrors(referenceText, typedText) {
-  const maxLength = Math.max(referenceText.length, typedText.length);
-  let errors = 0;
-
-  for (let i = 0; i < maxLength; i += 1) {
-    if ((referenceText[i] || "") !== (typedText[i] || "")) {
-      errors += 1;
-    }
-  }
-
-  return errors;
-}
-
-function updateLiveMetrics() {
-  const typed = els.typedText.value;
-  const reference = state.selectedExercise?.content || "";
-
-  els.liveCharCount.textContent = String(typed.length);
-  els.liveWordCount.textContent = String(
-    typed.trim() ? typed.trim().split(/\s+/).length : 0
-  );
-  els.liveErrorCount.textContent = String(estimateErrors(reference, typed));
-}
-
-function setStatus(el, type, label) {
-  el.className = `status-pill ${type}`;
-  el.textContent = label;
-}
-
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, options);
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `HTTP ${response.status}`);
+    let detail = `HTTP ${response.status}`;
+    try {
+      const data = await response.json();
+      detail = data.detail || JSON.stringify(data);
+    } catch {
+      detail = await response.text();
+    }
+    throw new Error(detail || `HTTP ${response.status}`);
   }
 
   return response.json();
 }
 
-async function loadHealth() {
-  try {
-    const backend = await fetchJson(`${API_BASE_URL}/health`);
-    setStatus(els.backendStatus, backend.status === "ok" ? "success" : "pending", backend.status);
-  } catch {
-    setStatus(els.backendStatus, "error", "Erreur");
+function setExerciseMode(mode) {
+  state.exerciseMode = mode;
+
+  els.tabText.classList.toggle("active", mode === "text");
+  els.tabWordList.classList.toggle("active", mode === "word_list");
+
+  els.textForm.classList.toggle("hidden", mode !== "text");
+  els.wordListForm.classList.toggle("hidden", mode !== "word_list");
+}
+
+function resetResultsView() {
+  els.resultWpm.textContent = "—";
+  els.resultAccuracy.textContent = "—";
+  els.resultErrors.textContent = "—";
+  renderKeyValueList(els.mistakesByCharacter, {});
+  renderKeyValueList(els.weakWords, {});
+  renderKeyValueList(els.weakBigrams, {});
+  renderSimpleList(els.suggestedFocus, []);
+}
+
+function resetTypingState() {
+  state.currentSessionId = null;
+  state.currentReferenceText = "";
+  state.lockedErrorIndex = null;
+  state.errorPositions = new Set();
+  state.typedHistory = [];
+
+  stopTimer();
+
+  els.sessionIdLabel.textContent = "—";
+  els.timerLabel.textContent = "0.0 s";
+  els.typingInput.value = "";
+  els.typingInput.disabled = true;
+  els.referenceTextRender.innerHTML = '<span class="empty-state">Lance une session pour commencer.</span>';
+
+  updateLiveMetrics();
+  resetResultsView();
+}
+
+function stopTimer() {
+  if (state.timerInterval) {
+    clearInterval(state.timerInterval);
+    state.timerInterval = null;
+  }
+}
+
+function startTimer() {
+  stopTimer();
+  state.sessionStartedAt = new Date();
+
+  state.timerInterval = setInterval(() => {
+    els.timerLabel.textContent = `${formatNumber(secondsSince(state.sessionStartedAt))} s`;
+  }, 100);
+}
+
+function currentProgressIndex() {
+  return state.typedHistory.length;
+}
+
+function currentErrorCount() {
+  return state.errorPositions.size;
+}
+
+function updateLiveMetrics() {
+  const progress = state.currentReferenceText.length
+    ? Math.floor((currentProgressIndex() / state.currentReferenceText.length) * 100)
+    : 0;
+
+  els.liveCharCount.textContent = String(currentProgressIndex());
+  els.liveProgress.textContent = `${progress}%`;
+  els.liveErrorCount.textContent = String(currentErrorCount());
+}
+
+function renderReferenceText() {
+  const reference = state.currentReferenceText;
+
+  if (!reference) {
+    els.referenceTextRender.innerHTML = '<span class="empty-state">Lance une session pour commencer.</span>';
+    return;
   }
 
-  try {
-    const analysis = await fetchJson(`${API_BASE_URL}/analysis/health`);
-    const ok = analysis.analysis?.status === "ok";
-    setStatus(els.analysisStatus, ok ? "success" : "pending", ok ? "OK" : "Inconnu");
-  } catch {
-    setStatus(els.analysisStatus, "error", "Erreur");
-  }
+  const progress = currentProgressIndex();
+  const locked = state.lockedErrorIndex;
+
+  const html = reference
+    .split("")
+    .map((char, index) => {
+      let cls = "char pending";
+
+      if (index < progress) {
+        cls = "char correct";
+      }
+
+      if (locked !== null && index === locked) {
+        cls = "char error";
+      } else if (index === progress && locked === null) {
+        cls = "char current";
+      }
+
+      const safeChar = char === " " ? "&nbsp;" : escapeHtml(char);
+      return `<span class="${cls}">${safeChar}</span>`;
+    })
+    .join("");
+
+  els.referenceTextRender.innerHTML = html;
+}
+
+function escapeHtml(str) {
+  return str
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function renderExerciseOptions() {
@@ -144,107 +234,223 @@ function renderExerciseOptions() {
   state.exercises.forEach((exercise) => {
     const option = document.createElement("option");
     option.value = String(exercise.id);
-    option.textContent = `#${exercise.id} · ${exercise.language.toUpperCase()} · ${exercise.difficulty} · ${exercise.content.slice(0, 42)}`;
+    const typeLabel = exercise.exercise_type === "word_list" ? "liste de mots" : "texte";
+    option.textContent = `#${exercise.id} · ${typeLabel} · ${exercise.language.toUpperCase()} · ${exercise.difficulty}`;
     els.exerciseSelect.appendChild(option);
   });
 }
 
+function updateWordCountVisibility() {
+  const selectedId = Number(els.exerciseSelect.value);
+  const exercise = state.exercises.find((item) => item.id === selectedId) || null;
+  state.selectedExercise = exercise;
+
+  const show = exercise?.exercise_type === "word_list";
+  els.wordCountField.classList.toggle("hidden", !show);
+}
+
 async function loadExercises() {
   try {
-    const exercises = await fetchJson(`${API_BASE_URL}/exercises`);
-    state.exercises = Array.isArray(exercises) ? exercises : [exercises];
+    const data = await fetchJson(`${API_BASE_URL}/exercises`);
+    state.exercises = Array.isArray(data) ? data : [data];
     renderExerciseOptions();
+    updateWordCountVisibility();
   } catch (error) {
     console.error("Erreur chargement exercices:", error);
   }
 }
 
-function selectExerciseById(exerciseId) {
-  state.selectedExercise = state.exercises.find((exercise) => exercise.id === Number(exerciseId)) || null;
-  els.referenceText.textContent = state.selectedExercise
-    ? state.selectedExercise.content
-    : "Sélectionne ou crée un exercice pour commencer.";
-  updateLiveMetrics();
-}
-
-async function createExercise() {
-  const content = els.newExerciseContent.value.trim();
-  const language = els.newExerciseLanguage.value;
-  const difficulty = els.newExerciseDifficulty.value;
-
+async function createTextExercise() {
+  const content = els.textExerciseContent.value.trim();
   if (!content) {
-    alert("Ajoute un texte avant de créer un exercice.");
+    alert("Ajoute un texte.");
     return;
   }
 
   try {
-    const exercise = await fetchJson(`${API_BASE_URL}/exercises`, {
+    await fetchJson(`${API_BASE_URL}/exercises`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ language, content, difficulty })
+      body: JSON.stringify({
+        exercise_type: "text",
+        language: els.textExerciseLanguage.value,
+        content,
+        difficulty: els.textExerciseDifficulty.value
+      })
     });
 
-    els.newExerciseContent.value = "";
+    els.textExerciseContent.value = "";
     await loadExercises();
-    els.exerciseSelect.value = String(exercise.id);
-    selectExerciseById(exercise.id);
   } catch (error) {
     console.error(error);
-    alert("Impossible de créer l'exercice.");
+    alert("Impossible de créer l'exercice texte.");
   }
 }
 
-function startTimer() {
-  stopTimer();
-  state.sessionStartedAt = new Date();
+async function createWordListExercise() {
+  const content = els.wordListContent.value.trim();
+  if (!content) {
+    alert("Ajoute une liste de mots.");
+    return;
+  }
 
-  state.timerInterval = window.setInterval(() => {
-    const elapsed = secondsSince(state.sessionStartedAt);
-    els.timerLabel.textContent = `${formatNumber(elapsed)} s`;
-  }, 100);
-}
+  try {
+    await fetchJson(`${API_BASE_URL}/exercises`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        exercise_type: "word_list",
+        language: els.wordListLanguage.value,
+        content,
+        difficulty: els.wordListDifficulty.value
+      })
+    });
 
-function stopTimer() {
-  if (state.timerInterval) {
-    window.clearInterval(state.timerInterval);
-    state.timerInterval = null;
+    els.wordListContent.value = "";
+    await loadExercises();
+  } catch (error) {
+    console.error(error);
+    alert("Impossible de créer la liste de mots.");
   }
 }
 
 async function startSession() {
-  if (!state.selectedExercise) {
-    alert("Choisis d'abord un exercice.");
+  const selectedId = Number(els.exerciseSelect.value);
+  const exercise = state.exercises.find((item) => item.id === selectedId);
+
+  if (!exercise) {
+    alert("Choisis un exercice.");
     return;
   }
 
-  const userName = els.userName.value.trim() || null;
-
   try {
+    const body = {
+      exercise_id: exercise.id,
+      user_name: els.userName.value.trim() || null
+    };
+
+    if (exercise.exercise_type === "word_list") {
+      body.word_count = Number(els.wordCountSelect.value);
+    }
+
     const session = await fetchJson(`${API_BASE_URL}/sessions/start`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        exercise_id: state.selectedExercise.id,
-        user_name: userName
-      })
+      body: JSON.stringify(body)
     });
 
+    state.selectedExercise = exercise;
     state.currentSessionId = session.id;
+    state.currentReferenceText = session.reference_text;
+    state.lockedErrorIndex = null;
+    state.errorPositions = new Set();
+    state.typedHistory = [];
+
     els.sessionIdLabel.textContent = String(session.id);
-    els.typedText.disabled = false;
-    els.typedText.value = "";
-    els.typedText.focus();
-    els.completeSessionBtn.disabled = false;
-    resetResultsView();
+    els.typingInput.disabled = false;
+    els.typingInput.value = "";
+    els.typingInput.focus();
+
+    renderReferenceText();
     updateLiveMetrics();
+    resetResultsView();
     startTimer();
   } catch (error) {
     console.error(error);
-    alert("Impossible de démarrer la session.");
+    alert(`Impossible de démarrer la session : ${error.message}`);
   }
 }
 
-function renderKeyValueList(container, entries, formatter = null) {
+function finishSessionAutomatically() {
+  const typedText = state.typedHistory.join("");
+  const durationSeconds = Math.max(secondsSince(state.sessionStartedAt), 0.1);
+  const errorCount = currentErrorCount();
+
+  completeSession(typedText, durationSeconds, errorCount);
+}
+
+async function completeSession(typedText, durationSeconds, errorCount) {
+  if (!state.currentSessionId) return;
+
+  try {
+    const result = await fetchJson(`${API_BASE_URL}/sessions/${state.currentSessionId}/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        typed_text: typedText,
+        duration_seconds: durationSeconds,
+        error_count: errorCount
+      })
+    });
+
+    stopTimer();
+    els.typingInput.disabled = true;
+
+    els.resultWpm.textContent = formatNumber(result.wpm);
+    els.resultAccuracy.textContent = `${formatNumber(result.accuracy)} %`;
+    els.resultErrors.textContent = String(result.error_count);
+
+    await loadDetailedAnalysis(state.currentSessionId);
+    await loadResultsHistory();
+  } catch (error) {
+    console.error(error);
+    alert("Impossible de terminer la session.");
+  }
+}
+
+function processTypingInput() {
+  if (!state.currentReferenceText || !state.currentSessionId) return;
+
+  let rawInput = els.typingInput.value;
+  const progress = currentProgressIndex();
+  const expectedChar = state.currentReferenceText[progress];
+
+  if (state.lockedErrorIndex !== null) {
+    if (!rawInput.length) {
+      state.lockedErrorIndex = null;
+      els.typingInput.value = "";
+      renderReferenceText();
+      return;
+    }
+
+    if (rawInput[0] === expectedChar) {
+      state.typedHistory.push(expectedChar);
+      els.typingInput.value = "";
+      state.lockedErrorIndex = null;
+      renderReferenceText();
+      updateLiveMetrics();
+
+      if (currentProgressIndex() >= state.currentReferenceText.length) {
+        finishSessionAutomatically();
+      }
+    } else {
+      els.typingInput.value = "";
+    }
+
+    return;
+  }
+
+  if (!rawInput.length) return;
+
+  const typedChar = rawInput[0];
+  els.typingInput.value = "";
+
+  if (typedChar === expectedChar) {
+    state.typedHistory.push(typedChar);
+  } else {
+    state.errorPositions.add(progress);
+    state.lockedErrorIndex = progress;
+  }
+
+  renderReferenceText();
+  updateLiveMetrics();
+
+  if (state.lockedErrorIndex === null && currentProgressIndex() >= state.currentReferenceText.length) {
+    finishSessionAutomatically();
+  }
+}
+
+function renderKeyValueList(container, entries) {
   container.innerHTML = "";
 
   if (!entries || !Object.keys(entries).length) {
@@ -262,7 +468,7 @@ function renderKeyValueList(container, entries, formatter = null) {
     label.textContent = key;
 
     const val = document.createElement("strong");
-    val.textContent = formatter ? formatter(value) : String(value);
+    val.textContent = String(value);
 
     li.appendChild(label);
     li.appendChild(val);
@@ -286,53 +492,6 @@ function renderSimpleList(container, values) {
     li.textContent = value;
     container.appendChild(li);
   });
-}
-
-function resetResultsView() {
-  els.resultWpm.textContent = "—";
-  els.resultAccuracy.textContent = "—";
-  els.resultErrors.textContent = "—";
-  renderKeyValueList(els.mistakesByCharacter, {});
-  renderKeyValueList(els.weakWords, {});
-  renderKeyValueList(els.weakBigrams, {});
-  renderSimpleList(els.suggestedFocus, []);
-}
-
-async function completeSession() {
-  if (!state.currentSessionId || !state.selectedExercise) {
-    alert("Aucune session active.");
-    return;
-  }
-
-  const typedText = els.typedText.value;
-  const durationSeconds = Math.max(secondsSince(state.sessionStartedAt), 0.1);
-  const errorCount = estimateErrors(state.selectedExercise.content, typedText);
-
-  try {
-    const result = await fetchJson(`${API_BASE_URL}/sessions/${state.currentSessionId}/complete`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        typed_text: typedText,
-        duration_seconds: durationSeconds,
-        error_count: errorCount
-      })
-    });
-
-    stopTimer();
-    els.typedText.disabled = true;
-    els.completeSessionBtn.disabled = true;
-
-    els.resultWpm.textContent = formatNumber(result.wpm);
-    els.resultAccuracy.textContent = `${formatNumber(result.accuracy)} %`;
-    els.resultErrors.textContent = String(result.error_count);
-
-    await loadDetailedAnalysis(state.currentSessionId);
-    await loadResultsHistory();
-  } catch (error) {
-    console.error(error);
-    alert("Impossible de terminer la session.");
-  }
 }
 
 async function loadDetailedAnalysis(sessionId) {
@@ -395,41 +554,32 @@ async function loadResultsHistory() {
   }
 }
 
-function resetSession() {
-  stopTimer();
-  state.currentSessionId = null;
-  state.sessionStartedAt = null;
-  els.sessionIdLabel.textContent = "—";
-  els.timerLabel.textContent = "0.0 s";
-  els.typedText.value = "";
-  els.typedText.disabled = true;
-  els.completeSessionBtn.disabled = true;
-  updateLiveMetrics();
-}
-
 function bindEvents() {
   els.themeToggle.addEventListener("click", () => {
     applyTheme(state.theme === "dark" ? "light" : "dark");
   });
 
-  els.exerciseSelect.addEventListener("change", (event) => {
-    selectExerciseById(event.target.value);
-  });
+  els.tabText.addEventListener("click", () => setExerciseMode("text"));
+  els.tabWordList.addEventListener("click", () => setExerciseMode("word_list"));
 
+  els.createTextExerciseBtn.addEventListener("click", createTextExercise);
+  els.createWordListExerciseBtn.addEventListener("click", createWordListExercise);
+
+  els.exerciseSelect.addEventListener("change", updateWordCountVisibility);
   els.refreshExercisesBtn.addEventListener("click", loadExercises);
-  els.createExerciseBtn.addEventListener("click", createExercise);
   els.startSessionBtn.addEventListener("click", startSession);
-  els.completeSessionBtn.addEventListener("click", completeSession);
-  els.resetSessionBtn.addEventListener("click", resetSession);
+  els.resetSessionBtn.addEventListener("click", resetTypingState);
   els.refreshResultsBtn.addEventListener("click", loadResultsHistory);
 
-  els.typedText.addEventListener("input", updateLiveMetrics);
+  els.typingInput.addEventListener("input", processTypingInput);
+  els.typingInput.addEventListener("paste", (event) => event.preventDefault());
 }
 
 async function init() {
   applyTheme(state.theme);
   bindEvents();
-  await loadHealth();
+  renderReferenceText();
+  updateLiveMetrics();
   await loadExercises();
   await loadResultsHistory();
 }

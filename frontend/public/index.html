@@ -6,11 +6,11 @@
   <title>Typing Coach</title>
   <meta
     name="description"
-    content="Plateforme de dactylographie intelligente avec analyse détaillée des performances."
+    content="Plateforme de dactylographie intelligente avec analyse détaillée."
   />
   <link rel="stylesheet" href="./style.css" />
 </head>
-<body data-theme="dark">
+<body data-theme="light">
   <div class="app-shell">
     <header class="topbar">
       <div class="brand-block">
@@ -24,46 +24,108 @@
       <div class="topbar-actions">
         <button id="theme-toggle" class="ghost-button" type="button" aria-label="Basculer le thème">
           <span class="theme-dot"></span>
-          <span id="theme-label">Mode clair</span>
+          <span id="theme-label">Mode sombre</span>
         </button>
       </div>
     </header>
 
-    <main class="layout">
-      <section class="panel panel-hero">
-        <div class="hero-copy">
-          <p class="section-label">Session</p>
-          <h2>Choisir un exercice puis lancer une session.</h2>
-          <p class="muted">
-            Le frontend capture la frappe, le backend orchestre la session, et le service Rust produit l’analyse détaillée.
-          </p>
-        </div>
-
-        <div class="status-grid">
-          <article class="status-card">
-            <span class="status-title">Frontend</span>
-            <strong class="status-pill success">Express</strong>
-          </article>
-
-          <article class="status-card">
-            <span class="status-title">Backend</span>
-            <strong id="backend-status" class="status-pill pending">Chargement</strong>
-          </article>
-
-          <article class="status-card">
-            <span class="status-title">Analysis</span>
-            <strong id="analysis-status" class="status-pill pending">Chargement</strong>
-          </article>
-        </div>
-      </section>
-
-      <section class="panel panel-form">
+    <main class="layout-single">
+      <section class="panel">
         <div class="panel-head">
           <div>
             <p class="section-label">Configuration</p>
-            <h3>Préparer l’exercice</h3>
+            <h2>Créer un exercice</h2>
           </div>
-          <button id="refresh-exercises-btn" class="ghost-button" type="button">Actualiser</button>
+        </div>
+
+        <div class="tabs">
+          <button id="tab-text" class="tab-button active" type="button">Texte</button>
+          <button id="tab-word-list" class="tab-button" type="button">Liste de mots</button>
+        </div>
+
+        <div id="text-form" class="exercise-form">
+          <div class="form-grid">
+            <label class="field field-full">
+              <span>Texte</span>
+              <textarea
+                id="text-exercise-content"
+                rows="5"
+                placeholder="Saisis ici un texte complet à taper."
+              ></textarea>
+            </label>
+
+            <label class="field">
+              <span>Langue</span>
+              <select id="text-exercise-language">
+                <option value="fr">Français</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Difficulté</span>
+              <select id="text-exercise-difficulty">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="button-row">
+            <button id="create-text-exercise-btn" class="primary-button" type="button">
+              Créer l’exercice texte
+            </button>
+          </div>
+        </div>
+
+        <div id="word-list-form" class="exercise-form hidden">
+          <div class="form-grid">
+            <label class="field field-full">
+              <span>Liste de mots</span>
+              <textarea
+                id="word-list-content"
+                rows="4"
+                placeholder="Exemple : coucou|maman|hibou|soleil|voiture"
+              ></textarea>
+            </label>
+
+            <label class="field">
+              <span>Langue</span>
+              <select id="word-list-language">
+                <option value="fr">Français</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Difficulté</span>
+              <select id="word-list-difficulty">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="button-row">
+            <button id="create-word-list-exercise-btn" class="primary-button" type="button">
+              Créer la liste de mots
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-label">Practice</p>
+            <h2>Lancer un test</h2>
+          </div>
+          <div class="meta-inline">
+            <span class="meta-chip">Session <strong id="session-id-label">—</strong></span>
+            <span class="meta-chip">Temps <strong id="timer-label">0.0 s</strong></span>
+          </div>
         </div>
 
         <div class="form-grid">
@@ -73,108 +135,79 @@
           </label>
 
           <label class="field">
-            <span>Exercice existant</span>
+            <span>Exercice</span>
             <select id="exercise-select">
               <option value="">Chargement...</option>
             </select>
           </label>
 
-          <label class="field field-full">
-            <span>Créer un exercice rapide</span>
-            <textarea
-              id="new-exercise-content"
-              rows="4"
-              placeholder="Saisis ici un texte pour créer un nouvel exercice."
-            ></textarea>
-          </label>
-
-          <label class="field">
-            <span>Langue</span>
-            <select id="new-exercise-language">
-              <option value="fr">Français</option>
-              <option value="en">English</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span>Difficulté</span>
-            <select id="new-exercise-difficulty">
-              <option value="easy">Easy</option>
-              <option value="medium">Medium</option>
-              <option value="hard">Hard</option>
+          <label id="word-count-field" class="field hidden">
+            <span>Nombre de mots</span>
+            <select id="word-count-select">
+              <option value="25">25</option>
+              <option value="40">40</option>
+              <option value="50">50</option>
+              <option value="75">75</option>
+              <option value="100">100</option>
             </select>
           </label>
         </div>
 
         <div class="button-row">
-          <button id="create-exercise-btn" class="secondary-button" type="button">
-            Créer l’exercice
-          </button>
+          <button id="refresh-exercises-btn" class="ghost-button" type="button">Actualiser</button>
           <button id="start-session-btn" class="primary-button" type="button">
             Lancer la session
-          </button>
-        </div>
-      </section>
-
-      <section class="panel panel-practice">
-        <div class="panel-head">
-          <div>
-            <p class="section-label">Practice</p>
-            <h3>Zone de frappe</h3>
-          </div>
-          <div class="meta-inline">
-            <span class="meta-chip">Session <strong id="session-id-label">—</strong></span>
-            <span class="meta-chip">Temps <strong id="timer-label">0.0 s</strong></span>
-          </div>
-        </div>
-
-        <div class="exercise-box">
-          <p class="exercise-label">Texte de référence</p>
-          <p id="reference-text" class="reference-text">
-            Sélectionne ou crée un exercice pour commencer.
-          </p>
-        </div>
-
-        <label class="field field-full">
-          <span>Texte saisi</span>
-          <textarea
-            id="typed-text"
-            rows="8"
-            placeholder="Ta frappe apparaîtra ici."
-            disabled
-          ></textarea>
-        </label>
-
-        <div class="live-metrics">
-          <article class="metric-card">
-            <span>Caractères</span>
-            <strong id="live-char-count">0</strong>
-          </article>
-          <article class="metric-card">
-            <span>Mots estimés</span>
-            <strong id="live-word-count">0</strong>
-          </article>
-          <article class="metric-card">
-            <span>Erreurs estimées</span>
-            <strong id="live-error-count">0</strong>
-          </article>
-        </div>
-
-        <div class="button-row">
-          <button id="complete-session-btn" class="primary-button" type="button" disabled>
-            Terminer et analyser
           </button>
           <button id="reset-session-btn" class="ghost-button" type="button">
             Réinitialiser
           </button>
         </div>
+
+        <div class="typing-zone">
+          <div class="exercise-box">
+            <p class="exercise-label">Texte à taper</p>
+            <div id="reference-text-render" class="reference-render">
+              <span class="empty-state">Lance une session pour commencer.</span>
+            </div>
+          </div>
+
+          <label class="field field-full">
+            <span>Zone de frappe</span>
+            <input
+              id="typing-input"
+              class="typing-input"
+              type="text"
+              placeholder="Commence à taper ici"
+              disabled
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+            />
+          </label>
+
+          <div class="live-metrics">
+            <article class="metric-card">
+              <span>Caractères validés</span>
+              <strong id="live-char-count">0</strong>
+            </article>
+            <article class="metric-card">
+              <span>Progression</span>
+              <strong id="live-progress">0%</strong>
+            </article>
+            <article class="metric-card">
+              <span>Erreurs</span>
+              <strong id="live-error-count">0</strong>
+            </article>
+          </div>
+        </div>
       </section>
 
-      <section class="panel panel-results">
+      <section class="panel">
         <div class="panel-head">
           <div>
             <p class="section-label">Results</p>
-            <h3>Résultat de session</h3>
+            <h2>Résultat de session</h2>
           </div>
         </div>
 
@@ -224,11 +257,11 @@
         </div>
       </section>
 
-      <section class="panel panel-history">
+      <section class="panel">
         <div class="panel-head">
           <div>
             <p class="section-label">History</p>
-            <h3>Derniers résultats</h3>
+            <h2>Derniers résultats</h2>
           </div>
           <button id="refresh-results-btn" class="ghost-button" type="button">Recharger</button>
         </div>

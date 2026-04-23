@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, field_validator
 
+from app.schemas.analysis import ErrorEvent
+
 
 class SessionCreate(BaseModel):
     exercise_id: int
@@ -22,6 +24,7 @@ class SessionComplete(BaseModel):
     typed_text: str
     duration_seconds: float
     error_count: int
+    error_events: list[ErrorEvent]
 
 
 class SessionResponse(BaseModel):

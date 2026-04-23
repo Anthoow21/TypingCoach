@@ -46,6 +46,14 @@
         <div id="text-form" class="exercise-form">
           <div class="form-grid">
             <label class="field field-full">
+              <span>Titre</span>
+              <input
+                id="text-exercise-title"
+                type="text"
+                placeholder="Exemple : Accents français niveau 1"
+              />
+            </label>
+            <label class="field field-full">
               <span>Texte</span>
               <textarea
                 id="text-exercise-content"
@@ -81,6 +89,14 @@
 
         <div id="word-list-form" class="exercise-form hidden">
           <div class="form-grid">
+            <label class="field field-full">
+              <span>Titre</span>
+              <input
+                id="word-list-title"
+                type="text"
+                placeholder="Exemple : Mots courts fréquents"
+              />
+            </label>
             <label class="field field-full">
               <span>Liste de mots</span>
               <textarea
@@ -160,6 +176,9 @@
           </button>
           <button id="reset-session-btn" class="ghost-button" type="button">
             Réinitialiser
+          </button>
+          <button id="random-session-btn" class="ghost-button" type="button">
+            Exercice aléatoire
           </button>
         </div>
 

@@ -11,7 +11,9 @@ const state = {
   sessionStartedAt: null,
   lockedErrorIndex: null,
   errorPositions: new Set(),
-  typedHistory: []
+  typedHistory: [],
+  errorEvents: [],
+  lockedMistypedChar: null,
 };
 
 const els = {
@@ -60,7 +62,11 @@ const els = {
   suggestedFocus: document.getElementById("suggested-focus"),
 
   resultsHistory: document.getElementById("results-history"),
-  refreshResultsBtn: document.getElementById("refresh-results-btn")
+  refreshResultsBtn: document.getElementById("refresh-results-btn"),
+
+  textExerciseTitle: document.getElementById("text-exercise-title"),
+  wordListTitle: document.getElementById("word-list-title"),
+  randomSessionBtn: document.getElementById("random-session-btn"),
 };
 
 function applyTheme(theme) {
@@ -125,6 +131,8 @@ function resetTypingState() {
   state.lockedErrorIndex = null;
   state.errorPositions = new Set();
   state.typedHistory = [];
+  state.errorEvents = [];
+  state.lockedMistypedChar = null;
 
   stopTimer();
 
@@ -171,11 +179,10 @@ function updateLiveMetrics() {
   els.liveProgress.textContent = `${progress}%`;
   els.liveErrorCount.textContent = String(currentErrorCount());
 }
-
 function renderReferenceText() {
-  const reference = state.currentReferenceText;
+  const referenceChars = Array.from(state.currentReferenceText);
 
-  if (!reference) {
+  if (!referenceChars.length) {
     els.referenceTextRender.innerHTML = '<span class="empty-state">Lance une session pour commencer.</span>';
     return;
   }
@@ -183,8 +190,7 @@ function renderReferenceText() {
   const progress = currentProgressIndex();
   const locked = state.lockedErrorIndex;
 
-  const html = reference
-    .split("")
+  const html = referenceChars
     .map((char, index) => {
       let cls = "char pending";
 
@@ -235,7 +241,7 @@ function renderExerciseOptions() {
     const option = document.createElement("option");
     option.value = String(exercise.id);
     const typeLabel = exercise.exercise_type === "word_list" ? "liste de mots" : "texte";
-    option.textContent = `#${exercise.id} · ${typeLabel} · ${exercise.language.toUpperCase()} · ${exercise.difficulty}`;
+    option.textContent = `${exercise.title} · ${typeLabel} · ${exercise.language.toUpperCase()} · ${exercise.difficulty}`;
     els.exerciseSelect.appendChild(option);
   });
 }
@@ -261,7 +267,14 @@ async function loadExercises() {
 }
 
 async function createTextExercise() {
+  const title = els.textExerciseTitle.value.trim();
   const content = els.textExerciseContent.value.trim();
+
+  if (!title) {
+    alert("Ajoute un titre.");
+    return;
+  }
+
   if (!content) {
     alert("Ajoute un texte.");
     return;
@@ -272,6 +285,7 @@ async function createTextExercise() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        title,
         exercise_type: "text",
         language: els.textExerciseLanguage.value,
         content,
@@ -279,6 +293,7 @@ async function createTextExercise() {
       })
     });
 
+    els.textExerciseTitle.value = "";
     els.textExerciseContent.value = "";
     await loadExercises();
   } catch (error) {
@@ -286,9 +301,15 @@ async function createTextExercise() {
     alert("Impossible de créer l'exercice texte.");
   }
 }
-
 async function createWordListExercise() {
+  const title = els.wordListTitle.value.trim();
   const content = els.wordListContent.value.trim();
+
+  if (!title) {
+    alert("Ajoute un titre.");
+    return;
+  }
+
   if (!content) {
     alert("Ajoute une liste de mots.");
     return;
@@ -299,6 +320,7 @@ async function createWordListExercise() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        title,
         exercise_type: "word_list",
         language: els.wordListLanguage.value,
         content,
@@ -306,12 +328,20 @@ async function createWordListExercise() {
       })
     });
 
+    els.wordListTitle.value = "";
     els.wordListContent.value = "";
     await loadExercises();
   } catch (error) {
     console.error(error);
     alert("Impossible de créer la liste de mots.");
   }
+}
+
+
+function syncTypingInputValue() {
+  const validated = state.typedHistory.join("");
+  const wrongPart = state.lockedMistypedChar || "";
+  els.typingInput.value = validated + wrongPart;
 }
 
 async function startSession() {
@@ -348,9 +378,12 @@ async function startSession() {
 
     els.sessionIdLabel.textContent = String(session.id);
     els.typingInput.disabled = false;
-    els.typingInput.value = "";
     els.typingInput.focus();
 
+    state.errorEvents = [];
+    state.lockedMistypedChar = null;
+
+    syncTypingInputValue();
     renderReferenceText();
     updateLiveMetrics();
     resetResultsView();
@@ -379,7 +412,8 @@ async function completeSession(typedText, durationSeconds, errorCount) {
       body: JSON.stringify({
         typed_text: typedText,
         duration_seconds: durationSeconds,
-        error_count: errorCount
+        error_count: errorCount,
+        error_events: state.errorEvents
       })
     });
 
@@ -397,55 +431,70 @@ async function completeSession(typedText, durationSeconds, errorCount) {
     alert("Impossible de terminer la session.");
   }
 }
-
-function processTypingInput() {
+function processTypingKey(event) {
   if (!state.currentReferenceText || !state.currentSessionId) return;
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
 
-  let rawInput = els.typingInput.value;
+  const referenceChars = Array.from(state.currentReferenceText);
   const progress = currentProgressIndex();
-  const expectedChar = state.currentReferenceText[progress];
+  const expectedChar = referenceChars[progress];
+
+  if (!expectedChar) {
+    return;
+  }
+
+  if (event.key.length !== 1 && event.key !== "Backspace") {
+    return;
+  }
+
+  event.preventDefault();
 
   if (state.lockedErrorIndex !== null) {
-    if (!rawInput.length) {
-      state.lockedErrorIndex = null;
-      els.typingInput.value = "";
+    if (event.key === "Backspace") {
+      state.lockedMistypedChar = null;
+      syncTypingInputValue();
       renderReferenceText();
       return;
     }
 
-    if (rawInput[0] === expectedChar) {
+    if (event.key === expectedChar) {
       state.typedHistory.push(expectedChar);
-      els.typingInput.value = "";
       state.lockedErrorIndex = null;
+      state.lockedMistypedChar = null;
+      syncTypingInputValue();
       renderReferenceText();
       updateLiveMetrics();
 
-      if (currentProgressIndex() >= state.currentReferenceText.length) {
+      if (currentProgressIndex() >= referenceChars.length) {
         finishSessionAutomatically();
       }
-    } else {
-      els.typingInput.value = "";
     }
 
     return;
   }
 
-  if (!rawInput.length) return;
-
-  const typedChar = rawInput[0];
-  els.typingInput.value = "";
-
-  if (typedChar === expectedChar) {
-    state.typedHistory.push(typedChar);
-  } else {
-    state.errorPositions.add(progress);
-    state.lockedErrorIndex = progress;
+  if (event.key === "Backspace") {
+    return;
   }
 
+  if (event.key === expectedChar) {
+    state.typedHistory.push(expectedChar);
+  } else {
+    state.errorPositions.add(progress);
+    state.errorEvents.push({
+      index: progress,
+      expected_char: expectedChar,
+      typed_char: event.key
+    });
+    state.lockedErrorIndex = progress;
+    state.lockedMistypedChar = event.key;
+  }
+
+  syncTypingInputValue();
   renderReferenceText();
   updateLiveMetrics();
 
-  if (state.lockedErrorIndex === null && currentProgressIndex() >= state.currentReferenceText.length) {
+  if (state.lockedErrorIndex === null && currentProgressIndex() >= referenceChars.length) {
     finishSessionAutomatically();
   }
 }
@@ -554,6 +603,25 @@ async function loadResultsHistory() {
   }
 }
 
+async function startRandomSession() {
+  if (!state.exercises.length) {
+    alert("Aucun exercice disponible.");
+    return;
+  }
+
+  const randomExercise = state.exercises[Math.floor(Math.random() * state.exercises.length)];
+  els.exerciseSelect.value = String(randomExercise.id);
+  updateWordCountVisibility();
+
+  if (randomExercise.exercise_type === "word_list") {
+    const possibleCounts = [25, 40, 50, 75, 100];
+    const randomCount = possibleCounts[Math.floor(Math.random() * possibleCounts.length)];
+    els.wordCountSelect.value = String(randomCount);
+  }
+
+  await startSession();
+}
+
 function bindEvents() {
   els.themeToggle.addEventListener("click", () => {
     applyTheme(state.theme === "dark" ? "light" : "dark");
@@ -571,8 +639,9 @@ function bindEvents() {
   els.resetSessionBtn.addEventListener("click", resetTypingState);
   els.refreshResultsBtn.addEventListener("click", loadResultsHistory);
 
-  els.typingInput.addEventListener("input", processTypingInput);
+  els.typingInput.addEventListener("keydown", processTypingKey);
   els.typingInput.addEventListener("paste", (event) => event.preventDefault());
+  els.randomSessionBtn.addEventListener("click", startRandomSession);
 }
 
 async function init() {

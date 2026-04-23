@@ -2,11 +2,18 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class ErrorEvent(BaseModel):
+    index: int
+    expected_char: str
+    typed_char: str
+
+
 class AnalyzeRequest(BaseModel):
     reference_text: str
     typed_text: str
     duration_seconds: float
     error_count: int
+    error_events: list[ErrorEvent]
 
 
 class AnalyzeResponse(BaseModel):

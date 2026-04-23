@@ -4,10 +4,18 @@ from pydantic import BaseModel, field_validator
 
 
 class ExerciseCreate(BaseModel):
+    title: str
     exercise_type: str
     language: str
     content: str
     difficulty: str = "easy"
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("title cannot be empty")
+        return value.strip()
 
     @field_validator("exercise_type")
     @classmethod
@@ -27,6 +35,7 @@ class ExerciseCreate(BaseModel):
 
 class ExerciseResponse(BaseModel):
     id: int
+    title: str
     exercise_type: str
     language: str
     content: str

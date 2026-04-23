@@ -57,7 +57,8 @@ def complete_session(session_id: int, payload: SessionComplete, db: Session = De
         reference_text=session.reference_text,
         typed_text=payload.typed_text,
         duration_seconds=payload.duration_seconds,
-        error_count=payload.error_count
+        error_count=payload.error_count,
+        error_events=payload.error_events
     )
 
     try:

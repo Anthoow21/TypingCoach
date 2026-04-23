@@ -8,6 +8,7 @@ class Exercise(Base):
     __tablename__ = "exercises"
 
     id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(150), nullable=False)
     exercise_type = Column(String(20), nullable=False, default="text")
     language = Column(String(10), nullable=False)
     content = Column(Text, nullable=False)

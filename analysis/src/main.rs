@@ -1,4 +1,8 @@
-use axum::{extract::Json, routing::{get, post}, Router};
+use axum::{
+    extract::Json,
+    routing::{get, post},
+    Router,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -9,12 +13,20 @@ struct HealthResponse {
     service: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
+struct ErrorEvent {
+    index: usize,
+    expected_char: String,
+    typed_char: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct AnalyzeRequest {
     reference_text: String,
     typed_text: String,
     duration_seconds: f64,
     error_count: i32,
+    error_events: Vec<ErrorEvent>,
 }
 
 #[derive(Serialize)]
@@ -47,71 +59,94 @@ fn compute_wpm(typed_text: &str, duration_seconds: f64) -> f64 {
 fn compute_accuracy(reference_text: &str, error_count: i32) -> f64 {
     let reference_length = reference_text.chars().count().max(1) as f64;
     let accuracy = ((reference_length - error_count as f64) / reference_length) * 100.0;
-    accuracy.clamp(0.0, 100.0).round() * 100.0 / 100.0
+    (accuracy.clamp(0.0, 100.0) * 100.0).round() / 100.0
 }
 
-fn character_mistakes(reference_text: &str, typed_text: &str) -> HashMap<String, i32> {
-    let mut counts: HashMap<String, i32> = HashMap::new();
+fn chars_vec(text: &str) -> Vec<char> {
+    text.chars().collect()
+}
 
-    for (expected, actual) in reference_text.chars().zip(typed_text.chars()) {
-        if expected != actual {
-            let key = expected.to_string();
-            *counts.entry(key).or_insert(0) += 1;
-        }
+fn extract_word_at(text: &str, index: usize) -> Option<String> {
+    let chars = chars_vec(text);
+    if chars.is_empty() || index >= chars.len() {
+        return None;
     }
 
-    if reference_text.len() > typed_text.len() {
-        for ch in reference_text.chars().skip(typed_text.chars().count()) {
-            let key = ch.to_string();
-            *counts.entry(key).or_insert(0) += 1;
+    let mut start = index;
+    while start > 0 && !chars[start - 1].is_whitespace() {
+        start -= 1;
+    }
+
+    let mut end = index;
+    while end + 1 < chars.len() && !chars[end + 1].is_whitespace() {
+        end += 1;
+    }
+
+    if chars[start].is_whitespace() {
+        return None;
+    }
+
+    Some(chars[start..=end].iter().collect())
+}
+
+fn extract_bigram_at(text: &str, index: usize) -> Option<String> {
+    let chars = chars_vec(text);
+    if chars.len() < 2 || index >= chars.len() {
+        return None;
+    }
+
+    if index + 1 < chars.len() && !chars[index].is_whitespace() && !chars[index + 1].is_whitespace() {
+        return Some(chars[index..=index + 1].iter().collect());
+    }
+
+    if index > 0 && !chars[index - 1].is_whitespace() && !chars[index].is_whitespace() {
+        return Some(chars[index - 1..=index].iter().collect());
+    }
+
+    None
+}
+
+fn mistakes_by_character(error_events: &[ErrorEvent]) -> HashMap<String, i32> {
+    let mut counts = HashMap::new();
+
+    for event in error_events {
+        if event.expected_char.trim().is_empty() {
+            continue;
+        }
+        *counts.entry(event.expected_char.clone()).or_insert(0) += 1;
+    }
+
+    counts
+}
+
+fn weak_words(reference_text: &str, error_events: &[ErrorEvent]) -> HashMap<String, i32> {
+    let mut counts = HashMap::new();
+
+    for event in error_events {
+        if let Some(word) = extract_word_at(reference_text, event.index) {
+            *counts.entry(word).or_insert(0) += 1;
         }
     }
 
     counts
 }
 
-fn word_mistakes(reference_text: &str, typed_text: &str) -> HashMap<String, i32> {
-    let mut counts: HashMap<String, i32> = HashMap::new();
+fn weak_bigrams(reference_text: &str, error_events: &[ErrorEvent]) -> HashMap<String, i32> {
+    let mut counts = HashMap::new();
 
-    let expected_words: Vec<&str> = reference_text.split_whitespace().collect();
-    let actual_words: Vec<&str> = typed_text.split_whitespace().collect();
-
-    for (expected, actual) in expected_words.iter().zip(actual_words.iter()) {
-        if expected != actual {
-            *counts.entry((*expected).to_string()).or_insert(0) += 1;
-        }
-    }
-
-    if expected_words.len() > actual_words.len() {
-        for word in expected_words.iter().skip(actual_words.len()) {
-            *counts.entry((*word).to_string()).or_insert(0) += 1;
+    for event in error_events {
+        if let Some(bigram) = extract_bigram_at(reference_text, event.index) {
+            *counts.entry(bigram).or_insert(0) += 1;
         }
     }
 
     counts
 }
 
-fn bigram_mistakes(reference_text: &str, typed_text: &str) -> HashMap<String, i32> {
-    let mut counts: HashMap<String, i32> = HashMap::new();
-
-    let ref_chars: Vec<char> = reference_text.chars().collect();
-    let typed_chars: Vec<char> = typed_text.chars().collect();
-    let len = ref_chars.len().min(typed_chars.len());
-
-    if len < 2 {
-        return counts;
-    }
-
-    for i in 0..(len - 1) {
-        let ref_bigram: String = [ref_chars[i], ref_chars[i + 1]].iter().collect();
-        let typed_bigram: String = [typed_chars[i], typed_chars[i + 1]].iter().collect();
-
-        if ref_bigram != typed_bigram {
-            *counts.entry(ref_bigram).or_insert(0) += 1;
-        }
-    }
-
-    counts
+fn top_entry(map: &HashMap<String, i32>) -> Option<(String, i32)> {
+    map.iter()
+        .max_by_key(|(_, count)| *count)
+        .map(|(key, value)| (key.clone(), *value))
 }
 
 fn suggested_focus(
@@ -121,26 +156,40 @@ fn suggested_focus(
 ) -> Vec<String> {
     let mut suggestions = Vec::new();
 
-    if !mistakes_by_character.is_empty() {
-        suggestions.push("Travailler les caractères les plus souvent ratés".to_string());
+    if let Some((ch, count)) = top_entry(mistakes_by_character) {
+        suggestions.push(format!(
+            "Travailler davantage le caractère '{}' ({} erreur(s))",
+            ch, count
+        ));
     }
-    if !weak_words.is_empty() {
-        suggestions.push("Revoir les mots qui génèrent le plus d'erreurs".to_string());
+
+    if let Some((word, count)) = top_entry(weak_words) {
+        suggestions.push(format!(
+            "Revoir le mot '{}' ({} erreur(s))",
+            word, count
+        ));
     }
-    if !weak_bigrams.is_empty() {
-        suggestions.push("S'entraîner sur les séquences de deux lettres problématiques".to_string());
+
+    if let Some((bigram, count)) = top_entry(weak_bigrams) {
+        suggestions.push(format!(
+            "S'entraîner sur la séquence '{}' ({} erreur(s))",
+            bigram, count
+        ));
     }
+
     if suggestions.is_empty() {
-        suggestions.push("Continuer sur des exercices similaires pour stabiliser la performance".to_string());
+        suggestions.push(
+            "Continuer sur des exercices similaires pour stabiliser la performance".to_string(),
+        );
     }
 
     suggestions
 }
 
 async fn analyze(Json(payload): Json<AnalyzeRequest>) -> Json<AnalyzeResponse> {
-    let mistakes_by_character = character_mistakes(&payload.reference_text, &payload.typed_text);
-    let weak_words = word_mistakes(&payload.reference_text, &payload.typed_text);
-    let weak_bigrams = bigram_mistakes(&payload.reference_text, &payload.typed_text);
+    let mistakes_by_character = mistakes_by_character(&payload.error_events);
+    let weak_words = weak_words(&payload.reference_text, &payload.error_events);
+    let weak_bigrams = weak_bigrams(&payload.reference_text, &payload.error_events);
 
     let response = AnalyzeResponse {
         wpm: compute_wpm(&payload.typed_text, payload.duration_seconds),
@@ -149,7 +198,11 @@ async fn analyze(Json(payload): Json<AnalyzeRequest>) -> Json<AnalyzeResponse> {
         mistakes_by_character: mistakes_by_character.clone(),
         weak_words: weak_words.clone(),
         weak_bigrams: weak_bigrams.clone(),
-        suggested_focus: suggested_focus(&mistakes_by_character, &weak_words, &weak_bigrams),
+        suggested_focus: suggested_focus(
+            &mistakes_by_character,
+            &weak_words,
+            &weak_bigrams,
+        ),
     };
 
     Json(response)

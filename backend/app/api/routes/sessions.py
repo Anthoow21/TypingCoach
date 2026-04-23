@@ -73,9 +73,15 @@ def complete_session(session_id: int, payload: SessionComplete, db: Session = De
         error_count=analysis_data["error_count"]
     )
 
+    enriched_analysis_payload = {
+        **analysis_data,
+        "reference_text": session.reference_text,
+        "error_events": [event.model_dump() for event in payload.error_events],
+    }
+
     detailed_analysis = DetailedAnalysis(
         session_id=session.id,
-        analysis_payload=analysis_data
+        analysis_payload=enriched_analysis_payload
     )
 
     session.status = "completed"
@@ -86,7 +92,15 @@ def complete_session(session_id: int, payload: SessionComplete, db: Session = De
     db.commit()
     db.refresh(result)
 
-    return result
+    return {
+        "id": result.id,
+        "session_id": result.session_id,
+        "practice_series_id": session.practice_series_id,
+        "wpm": result.wpm,
+        "accuracy": result.accuracy,
+        "error_count": result.error_count,
+        "created_at": result.created_at,
+    }
 
 
 @router.get("/{session_id}", response_model=SessionResponse)

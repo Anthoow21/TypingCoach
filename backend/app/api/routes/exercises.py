@@ -11,6 +11,7 @@ router = APIRouter(prefix="/exercises", tags=["exercises"])
 @router.post("", response_model=ExerciseResponse)
 def create_exercise(payload: ExerciseCreate, db: Session = Depends(get_db)):
     exercise = Exercise(
+        exercise_type=payload.exercise_type,
         language=payload.language,
         content=payload.content,
         difficulty=payload.difficulty

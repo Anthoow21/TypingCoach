@@ -4,48 +4,242 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Typing Coach</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta
+    name="description"
+    content="Plateforme de dactylographie intelligente avec analyse détaillée des performances."
+  />
+  <link rel="stylesheet" href="./style.css" />
 </head>
-<body>
-  <main class="container">
-    <h1>Typing Coach</h1>
-    <p class="subtitle">Frontend Node.js + Express</p>
-
-    <section class="card">
-      <h2>État des services</h2>
-
-      <div class="status-row">
-        <span>Frontend Express</span>
-        <span id="frontend-status" class="status ok">OK</span>
+<body data-theme="dark">
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-block">
+        <p class="eyebrow">Typing Coach</p>
+        <h1>Practice with signal, not noise.</h1>
+        <p class="lede">
+          Une interface de dactylographie sobre, pensée pour pratiquer, analyser et progresser.
+        </p>
       </div>
 
-      <div class="status-row">
-        <span>Backend Python</span>
-        <span id="backend-status" class="status pending">Chargement...</span>
+      <div class="topbar-actions">
+        <button id="theme-toggle" class="ghost-button" type="button" aria-label="Basculer le thème">
+          <span class="theme-dot"></span>
+          <span id="theme-label">Mode clair</span>
+        </button>
       </div>
+    </header>
 
-      <div class="status-row">
-        <span>Service d’analyse Rust</span>
-        <span id="analysis-status" class="status pending">Chargement...</span>
-      </div>
+    <main class="layout">
+      <section class="panel panel-hero">
+        <div class="hero-copy">
+          <p class="section-label">Session</p>
+          <h2>Choisir un exercice puis lancer une session.</h2>
+          <p class="muted">
+            Le frontend capture la frappe, le backend orchestre la session, et le service Rust produit l’analyse détaillée.
+          </p>
+        </div>
 
-      <button id="refresh-btn">Rafraîchir les statuts</button>
-    </section>
+        <div class="status-grid">
+          <article class="status-card">
+            <span class="status-title">Frontend</span>
+            <strong class="status-pill success">Express</strong>
+          </article>
 
-    <section class="card">
-      <h2>Prototype du projet</h2>
-      <p>
-        Cette interface servira ensuite pour :
-      </p>
-      <ul>
-        <li>le test de dactylographie,</li>
-        <li>l’analyse des fautes,</li>
-        <li>le suivi des performances,</li>
-        <li>les recommandations personnalisées.</li>
-      </ul>
-    </section>
-  </main>
+          <article class="status-card">
+            <span class="status-title">Backend</span>
+            <strong id="backend-status" class="status-pill pending">Chargement</strong>
+          </article>
 
-  <script src="app.js"></script>
+          <article class="status-card">
+            <span class="status-title">Analysis</span>
+            <strong id="analysis-status" class="status-pill pending">Chargement</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel panel-form">
+        <div class="panel-head">
+          <div>
+            <p class="section-label">Configuration</p>
+            <h3>Préparer l’exercice</h3>
+          </div>
+          <button id="refresh-exercises-btn" class="ghost-button" type="button">Actualiser</button>
+        </div>
+
+        <div class="form-grid">
+          <label class="field">
+            <span>Nom affiché</span>
+            <input id="user-name" type="text" placeholder="Anthony" />
+          </label>
+
+          <label class="field">
+            <span>Exercice existant</span>
+            <select id="exercise-select">
+              <option value="">Chargement...</option>
+            </select>
+          </label>
+
+          <label class="field field-full">
+            <span>Créer un exercice rapide</span>
+            <textarea
+              id="new-exercise-content"
+              rows="4"
+              placeholder="Saisis ici un texte pour créer un nouvel exercice."
+            ></textarea>
+          </label>
+
+          <label class="field">
+            <span>Langue</span>
+            <select id="new-exercise-language">
+              <option value="fr">Français</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Difficulté</span>
+            <select id="new-exercise-difficulty">
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="button-row">
+          <button id="create-exercise-btn" class="secondary-button" type="button">
+            Créer l’exercice
+          </button>
+          <button id="start-session-btn" class="primary-button" type="button">
+            Lancer la session
+          </button>
+        </div>
+      </section>
+
+      <section class="panel panel-practice">
+        <div class="panel-head">
+          <div>
+            <p class="section-label">Practice</p>
+            <h3>Zone de frappe</h3>
+          </div>
+          <div class="meta-inline">
+            <span class="meta-chip">Session <strong id="session-id-label">—</strong></span>
+            <span class="meta-chip">Temps <strong id="timer-label">0.0 s</strong></span>
+          </div>
+        </div>
+
+        <div class="exercise-box">
+          <p class="exercise-label">Texte de référence</p>
+          <p id="reference-text" class="reference-text">
+            Sélectionne ou crée un exercice pour commencer.
+          </p>
+        </div>
+
+        <label class="field field-full">
+          <span>Texte saisi</span>
+          <textarea
+            id="typed-text"
+            rows="8"
+            placeholder="Ta frappe apparaîtra ici."
+            disabled
+          ></textarea>
+        </label>
+
+        <div class="live-metrics">
+          <article class="metric-card">
+            <span>Caractères</span>
+            <strong id="live-char-count">0</strong>
+          </article>
+          <article class="metric-card">
+            <span>Mots estimés</span>
+            <strong id="live-word-count">0</strong>
+          </article>
+          <article class="metric-card">
+            <span>Erreurs estimées</span>
+            <strong id="live-error-count">0</strong>
+          </article>
+        </div>
+
+        <div class="button-row">
+          <button id="complete-session-btn" class="primary-button" type="button" disabled>
+            Terminer et analyser
+          </button>
+          <button id="reset-session-btn" class="ghost-button" type="button">
+            Réinitialiser
+          </button>
+        </div>
+      </section>
+
+      <section class="panel panel-results">
+        <div class="panel-head">
+          <div>
+            <p class="section-label">Results</p>
+            <h3>Résultat de session</h3>
+          </div>
+        </div>
+
+        <div class="results-grid">
+          <article class="metric-card large">
+            <span>WPM</span>
+            <strong id="result-wpm">—</strong>
+          </article>
+          <article class="metric-card large">
+            <span>Accuracy</span>
+            <strong id="result-accuracy">—</strong>
+          </article>
+          <article class="metric-card large">
+            <span>Errors</span>
+            <strong id="result-errors">—</strong>
+          </article>
+        </div>
+
+        <div class="analysis-grid">
+          <article class="analysis-card">
+            <h4>Caractères problématiques</h4>
+            <ul id="mistakes-by-character" class="list-block">
+              <li class="empty-state">Aucune donnée.</li>
+            </ul>
+          </article>
+
+          <article class="analysis-card">
+            <h4>Mots faibles</h4>
+            <ul id="weak-words" class="list-block">
+              <li class="empty-state">Aucune donnée.</li>
+            </ul>
+          </article>
+
+          <article class="analysis-card">
+            <h4>Bigrammes faibles</h4>
+            <ul id="weak-bigrams" class="list-block">
+              <li class="empty-state">Aucune donnée.</li>
+            </ul>
+          </article>
+
+          <article class="analysis-card">
+            <h4>Axes de travail</h4>
+            <ul id="suggested-focus" class="list-block">
+              <li class="empty-state">Aucune donnée.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel panel-history">
+        <div class="panel-head">
+          <div>
+            <p class="section-label">History</p>
+            <h3>Derniers résultats</h3>
+          </div>
+          <button id="refresh-results-btn" class="ghost-button" type="button">Recharger</button>
+        </div>
+
+        <div id="results-history" class="history-list">
+          <p class="empty-state">Aucun résultat pour le moment.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./app.js"></script>
 </body>
 </html>

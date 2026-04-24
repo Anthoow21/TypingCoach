@@ -1,0 +1,9 @@
+.page-home .panel:first-child {
+  background:
+    linear-gradient(135deg, rgba(28, 124, 84, 0.08), transparent 42%),
+    var(--panel);
+}
+
+.page-home .panel:first-child .form-grid {
+  align-items: end;
+}

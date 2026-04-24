@@ -471,64 +471,6 @@ textarea:focus {
   }
 }
 
-.series-box {
-  margin-top: 18px;
-  background: var(--panel-strong);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  padding: 18px;
-}
-
-.targeted-training-box {
-  margin-top: 18px;
-  background: var(--panel-strong);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  padding: 18px;
-}
-
-.recommendations-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.recommendations-list {
-  display: grid;
-  gap: 12px;
-}
-
-.recommendation-card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 16px;
-}
-
-.recommendation-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 10px;
-}
-
-.recommendation-card h4 {
-  margin: 4px 0 0;
-}
-
-.series-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.series-sessions-block {
-  margin-top: 18px;
-}
-
 .metric-card.compact {
   min-height: 120px;
   display: flex;
@@ -731,77 +673,6 @@ textarea:focus {
   overflow: hidden;
 }
 
-.history-toolbar {
-  display: grid;
-  gap: 16px;
-  margin-bottom: 18px;
-}
-
-.history-tabs {
-  margin-bottom: 0;
-}
-
-.history-search {
-  max-width: 360px;
-}
-
-.history-card,
-.history-group-card {
-  background: var(--panel-strong);
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  overflow: hidden;
-}
-
-.history-card-button,
-.history-group-toggle {
-  width: 100%;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  padding: 18px;
-}
-
-.history-card-button:hover,
-.history-group-toggle:hover {
-  background: var(--accent-soft);
-}
-
-.history-card-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 14px;
-}
-
-.history-meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 18px;
-  margin-top: 12px;
-  color: var(--muted);
-  font-size: 0.92rem;
-}
-
-.history-pill {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.history-group-body {
-  display: grid;
-  gap: 12px;
-  padding: 0 18px 18px;
-}
-
 .danger-copy {
   color: var(--danger);
 }
@@ -919,11 +790,4 @@ textarea:focus {
     gap: 18px;
   }
 
-  .history-card-top {
-    flex-direction: column;
-  }
-
-  .history-search {
-    max-width: none;
-  }
 }

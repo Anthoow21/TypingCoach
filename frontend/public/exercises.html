@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Typing Coach - Exercices</title>
+  <meta name="description" content="Création d'exercices Typing Coach." />
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body data-theme="light">
+  <div class="app-shell">
+    <header class="topbar site-nav">
+      <nav class="main-nav" aria-label="Navigation principale">
+        <a href="index.html" class="main-nav-link">Accueil</a>
+        <a href="exercises.html" class="main-nav-link active">Exercices</a>
+        <a href="series.html" class="main-nav-link">Séries</a>
+        <a href="practice.html" class="main-nav-link">Practice cible</a>
+        <a href="history.html" class="main-nav-link">Historique</a>
+        <a href="stats.html" class="main-nav-link">Stats</a>
+      </nav>
+
+      <div class="topbar-actions">
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Basculer le theme">
+          <span class="theme-dot"></span>
+          <span id="theme-label">Mode sombre</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="layout-single">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-label">Exercices</p>
+            <h2>Créer un nouvel exercice</h2>
+            <p class="muted page-copy">Sépare clairement la création de contenu du reste du produit pour garder un flow plus lisible.</p>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button id="tab-text" class="tab-button active" type="button">Texte</button>
+          <button id="tab-word-list" class="tab-button" type="button">Liste de mots</button>
+        </div>
+
+        <p id="exercise-feedback" class="muted page-copy">Crée un exercice texte ou une liste de mots.</p>
+
+        <div id="text-form" class="exercise-form">
+          <div class="form-grid">
+            <label class="field field-full">
+              <span>Titre</span>
+              <input id="text-exercise-title" type="text" placeholder="Exemple : Accents français niveau 1" />
+            </label>
+
+            <label class="field field-full">
+              <span>Texte</span>
+              <textarea id="text-exercise-content" rows="5" placeholder="Saisis ici un texte complet à taper."></textarea>
+            </label>
+
+            <label class="field">
+              <span>Langue</span>
+              <select id="text-exercise-language">
+                <option value="fr">Français</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Difficulté</span>
+              <select id="text-exercise-difficulty">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="button-row">
+            <button id="create-text-exercise-btn" class="primary-button" type="button">Créer l'exercice texte</button>
+          </div>
+        </div>
+
+        <div id="word-list-form" class="exercise-form hidden">
+          <div class="form-grid">
+            <label class="field field-full">
+              <span>Titre</span>
+              <input id="word-list-title" type="text" placeholder="Exemple : Mots courts fréquents" />
+            </label>
+
+            <label class="field field-full">
+              <span>Liste de mots</span>
+              <textarea id="word-list-content" rows="4" placeholder="Exemple : coucou|maman|hibou|soleil|voiture"></textarea>
+            </label>
+
+            <label class="field">
+              <span>Langue</span>
+              <select id="word-list-language">
+                <option value="fr">Français</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Difficulté</span>
+              <select id="word-list-difficulty">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="button-row">
+            <button id="create-word-list-exercise-btn" class="primary-button" type="button">Créer la liste de mots</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./js/exercises.js"></script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Typing Coach - Historique</title>
+  <meta name="description" content="Historique des sessions Typing Coach." />
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body data-theme="light">
+  <div class="app-shell">
+    <header class="topbar site-nav">
+      <nav class="main-nav" aria-label="Navigation principale">
+        <a href="index.html" class="main-nav-link">Accueil</a>
+        <a href="exercises.html" class="main-nav-link">Exercices</a>
+        <a href="series.html" class="main-nav-link">Séries</a>
+        <a href="practice.html" class="main-nav-link">Practice cible</a>
+        <a href="history.html" class="main-nav-link active">Historique</a>
+        <a href="stats.html" class="main-nav-link">Stats</a>
+      </nav>
+
+      <div class="topbar-actions">
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Basculer le theme">
+          <span class="theme-dot"></span>
+          <span id="theme-label">Mode sombre</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="layout-single">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-label">Historique</p>
+            <h2>Sessions et séries passées</h2>
+            <p class="muted page-copy">Retrouve les parties jouées, filtre-les et ouvre le détail d'une session quand tu en as besoin.</p>
+          </div>
+          <button id="refresh-results-btn" class="ghost-button" type="button">Recharger</button>
+        </div>
+
+        <div class="history-toolbar">
+          <div class="tabs history-tabs">
+            <button id="history-filter-all" class="tab-button active" type="button">Tout</button>
+            <button id="history-filter-sessions" class="tab-button" type="button">Sessions</button>
+            <button id="history-filter-series" class="tab-button" type="button">Séries</button>
+            <button id="history-filter-adaptive" class="tab-button" type="button">Practice cible</button>
+          </div>
+
+          <label class="field history-search">
+            <span>Recherche</span>
+            <input id="history-search" type="text" placeholder="Utilisateur, titre, session..." />
+          </label>
+        </div>
+
+        <div id="results-history" class="history-list">
+          <p class="empty-state">Aucun résultat pour le moment.</p>
+        </div>
+
+        <div id="history-pagination" class="history-pagination hidden">
+          <button id="history-prev-btn" class="ghost-button" type="button">Précédent</button>
+          <span id="history-page-label" class="pagination-label">Page 1 / 1</span>
+          <button id="history-next-btn" class="ghost-button" type="button">Suivant</button>
+        </div>
+      </section>
+
+      <div id="session-modal" class="modal hidden">
+        <div class="modal-backdrop" id="session-modal-backdrop"></div>
+        <div class="modal-panel">
+          <div class="panel-head">
+            <div>
+              <p class="section-label">Session Detail</p>
+              <h2 id="modal-session-title">Session</h2>
+            </div>
+            <button id="close-session-modal-btn" class="ghost-button" type="button">Fermer</button>
+          </div>
+
+          <div class="results-grid">
+            <article class="metric-card"><span>WPM</span><strong id="modal-wpm">-</strong></article>
+            <article class="metric-card"><span>Accuracy</span><strong id="modal-accuracy">-</strong></article>
+            <article class="metric-card"><span>Errors</span><strong id="modal-errors">-</strong></article>
+          </div>
+
+          <div class="analysis-grid">
+            <article class="analysis-card"><h4>Caractères problématiques</h4><ul id="modal-mistakes-by-character" class="list-block"><li class="empty-state">Aucune donnée.</li></ul></article>
+            <article class="analysis-card"><h4>Mots faibles</h4><ul id="modal-weak-words" class="list-block"><li class="empty-state">Aucune donnée.</li></ul></article>
+            <article class="analysis-card"><h4>Séquences difficiles</h4><ul id="modal-weak-sequences" class="list-block"><li class="empty-state">Aucune donnée.</li></ul></article>
+            <article class="analysis-card"><h4>Axes de travail</h4><ul id="modal-suggested-focus" class="list-block"><li class="empty-state">Aucune donnée.</li></ul></article>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="./js/history.js"></script>
+</body>
+</html>

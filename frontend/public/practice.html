@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Typing Coach - Accueil</title>
-  <meta name="description" content="Session classique de Typing Coach." />
+  <title>Typing Coach - Practice Cible</title>
+  <meta name="description" content="Entraînement ciblé à partir de tes faiblesses." />
   <link rel="stylesheet" href="./css/style.css" />
 </head>
 <body data-theme="light">
   <div class="app-shell">
     <header class="topbar site-nav">
       <nav class="main-nav" aria-label="Navigation principale">
-        <a href="index.html" class="main-nav-link active">Accueil</a>
+        <a href="index.html" class="main-nav-link">Accueil</a>
         <a href="exercises.html" class="main-nav-link">Exercices</a>
         <a href="series.html" class="main-nav-link">Séries</a>
-        <a href="practice.html" class="main-nav-link">Practice cible</a>
+        <a href="practice.html" class="main-nav-link active">Practice cible</a>
         <a href="history.html" class="main-nav-link">Historique</a>
         <a href="stats.html" class="main-nav-link">Stats</a>
       </nav>
@@ -31,9 +31,9 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="section-label">Accueil</p>
-            <h2>Session classique</h2>
-            <p class="muted page-copy">Choisis un exercice, tape-le, puis consulte immédiatement le résumé de ta session.</p>
+            <p class="section-label">Practice cible</p>
+            <h2>Entraînement adaptatif</h2>
+            <p class="muted page-copy">Charge ton profil, choisis une recommandation et entraîne-toi sur tes points faibles.</p>
           </div>
           <div class="meta-inline">
             <span class="meta-chip">Session <strong id="session-id-label">-</strong></span>
@@ -42,35 +42,31 @@
         </div>
 
         <div class="form-grid">
-          <label class="field">
+          <label class="field field-full">
             <span>Nom affiché</span>
             <input id="user-name" type="text" placeholder="Anthony" />
           </label>
-
-          <label class="field">
-            <span>Exercice</span>
-            <select id="exercise-select">
-              <option value="">Chargement...</option>
-            </select>
-          </label>
-
-          <label id="word-count-field" class="field hidden">
-            <span>Nombre de mots</span>
-            <select id="word-count-select">
-              <option value="25">25</option>
-              <option value="40">40</option>
-              <option value="50">50</option>
-              <option value="75">75</option>
-              <option value="100">100</option>
-            </select>
-          </label>
         </div>
 
-        <div class="button-row">
-          <button id="refresh-exercises-btn" class="ghost-button" type="button">Actualiser</button>
-          <button id="random-session-btn" class="ghost-button" type="button">Exercice aléatoire</button>
-          <button id="start-session-btn" class="primary-button" type="button">Lancer la session</button>
-          <button id="reset-session-btn" class="ghost-button" type="button">Réinitialiser</button>
+        <div class="targeted-training-box">
+          <div class="panel-head compact-head">
+            <div>
+              <p class="section-label">Adaptive Practice</p>
+              <h3>Recommandations</h3>
+            </div>
+            <button id="load-recommendations-btn" class="ghost-button" type="button">Charger</button>
+          </div>
+
+          <p id="recommendations-status" class="muted">Renseigne ton nom puis charge tes recommandations personnalisées.</p>
+
+          <div id="recommendations-summary" class="recommendations-summary hidden">
+            <span class="meta-chip">Erreurs / séquences <strong id="reco-errors-label">-</strong></span>
+            <span class="meta-chip">Lenteurs <strong id="reco-latency-label">-</strong></span>
+          </div>
+
+          <div id="recommendations-list" class="recommendations-list">
+            <p class="empty-state">Aucune recommandation chargée.</p>
+          </div>
         </div>
       </section>
 
@@ -85,23 +81,13 @@
         <div class="exercise-box">
           <p class="exercise-label">Texte à taper</p>
           <div id="reference-text-render" class="reference-render">
-            <span class="empty-state">Lance une session pour commencer.</span>
+            <span class="empty-state">Lance un entraînement ciblé pour commencer.</span>
           </div>
         </div>
 
         <label class="field field-full">
           <span>Zone de frappe</span>
-          <input
-            id="typing-input"
-            class="typing-input"
-            type="text"
-            placeholder="Commence à taper ici"
-            disabled
-            autocomplete="off"
-            autocorrect="off"
-            autocapitalize="off"
-            spellcheck="false"
-          />
+          <input id="typing-input" class="typing-input" type="text" placeholder="Commence à taper ici" disabled autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
         </label>
 
         <div class="live-metrics">
@@ -129,40 +115,16 @@
         </div>
 
         <div class="results-grid">
-          <article class="metric-card large">
-            <span>WPM</span>
-            <strong id="result-wpm">-</strong>
-          </article>
-          <article class="metric-card large">
-            <span>Accuracy</span>
-            <strong id="result-accuracy">-</strong>
-          </article>
-          <article class="metric-card large">
-            <span>Erreurs</span>
-            <strong id="result-errors">-</strong>
-          </article>
+          <article class="metric-card large"><span>WPM</span><strong id="result-wpm">-</strong></article>
+          <article class="metric-card large"><span>Accuracy</span><strong id="result-accuracy">-</strong></article>
+          <article class="metric-card large"><span>Erreurs</span><strong id="result-errors">-</strong></article>
         </div>
 
         <div class="analysis-grid">
-          <article class="analysis-card">
-            <h4>Caractères problématiques</h4>
-            <ul id="mistakes-by-character" class="list-block"><li class="empty-state">Aucune donnée.</li></ul>
-          </article>
-
-          <article class="analysis-card">
-            <h4>Mots faibles</h4>
-            <ul id="weak-words" class="list-block"><li class="empty-state">Aucune donnée.</li></ul>
-          </article>
-
-          <article class="analysis-card">
-            <h4>Séquences difficiles</h4>
-            <ul id="weak-sequences" class="list-block"><li class="empty-state">Aucune donnée.</li></ul>
-          </article>
-
-          <article class="analysis-card">
-            <h4>Axes de travail</h4>
-            <ul id="suggested-focus" class="list-block"><li class="empty-state">Aucune donnée.</li></ul>
-          </article>
+          <article class="analysis-card"><h4>Caractères problématiques</h4><ul id="mistakes-by-character" class="list-block"><li class="empty-state">Aucune donnée.</li></ul></article>
+          <article class="analysis-card"><h4>Mots faibles</h4><ul id="weak-words" class="list-block"><li class="empty-state">Aucune donnée.</li></ul></article>
+          <article class="analysis-card"><h4>Séquences difficiles</h4><ul id="weak-sequences" class="list-block"><li class="empty-state">Aucune donnée.</li></ul></article>
+          <article class="analysis-card"><h4>Axes de travail</h4><ul id="suggested-focus" class="list-block"><li class="empty-state">Aucune donnée.</li></ul></article>
         </div>
 
         <div class="result-replay-block">
@@ -186,6 +148,6 @@
     </main>
   </div>
 
-  <script type="module" src="./js/home.js"></script>
+  <script type="module" src="./js/practice.js"></script>
 </body>
 </html>

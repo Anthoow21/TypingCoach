@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Typing Coach - Séries</title>
+  <meta name="description" content="Séries d'exercices Typing Coach." />
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body data-theme="light">
+  <div class="app-shell">
+    <header class="topbar site-nav">
+      <nav class="main-nav" aria-label="Navigation principale">
+        <a href="index.html" class="main-nav-link">Accueil</a>
+        <a href="exercises.html" class="main-nav-link">Exercices</a>
+        <a href="series.html" class="main-nav-link active">Séries</a>
+        <a href="practice.html" class="main-nav-link">Practice cible</a>
+        <a href="history.html" class="main-nav-link">Historique</a>
+        <a href="stats.html" class="main-nav-link">Stats</a>
+      </nav>
+
+      <div class="topbar-actions">
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Basculer le theme">
+          <span class="theme-dot"></span>
+          <span id="theme-label">Mode sombre</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="layout-single">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-label">Séries</p>
+            <h2>Lancer une série d'exercices</h2>
+            <p class="muted page-copy">Prépare une série, suis sa progression puis consulte le résumé agrégé sans mélanger ça avec les sessions simples.</p>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <label class="field">
+            <span>Nom affiché</span>
+            <input id="series-user-name" type="text" placeholder="Anthony" />
+          </label>
+
+          <label class="field">
+            <span>Nombre d'exercices</span>
+            <select id="series-count-select">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="15">15</option>
+              <option value="20">20</option>
+            </select>
+          </label>
+
+          <label class="field field-full">
+            <span>Type d'exercices</span>
+            <div class="checkbox-group">
+              <label class="check-pill"><input type="checkbox" id="series-mode-text" checked /><span>Inclure les textes</span></label>
+              <label class="check-pill"><input type="checkbox" id="series-mode-word-list" checked /><span>Inclure les listes</span></label>
+            </div>
+          </label>
+
+          <div id="series-word-counts-field" class="field field-full">
+            <span>Tailles autorisées pour les listes de mots</span>
+            <div class="checkbox-group">
+              <label class="check-pill"><input type="checkbox" class="series-word-count-checkbox" value="25" checked /><span>25 mots</span></label>
+              <label class="check-pill"><input type="checkbox" class="series-word-count-checkbox" value="40" checked /><span>40 mots</span></label>
+              <label class="check-pill"><input type="checkbox" class="series-word-count-checkbox" value="50" checked /><span>50 mots</span></label>
+              <label class="check-pill"><input type="checkbox" class="series-word-count-checkbox" value="75" checked /><span>75 mots</span></label>
+              <label class="check-pill"><input type="checkbox" class="series-word-count-checkbox" value="100" checked /><span>100 mots</span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="button-row">
+          <button id="start-series-btn" class="primary-button" type="button">Lancer la série</button>
+          <button id="load-series-summary-btn" class="ghost-button" type="button">Charger un résumé</button>
+        </div>
+
+        <div id="series-progress-box" class="series-box hidden">
+          <div class="series-meta">
+            <span class="meta-chip">Série <strong id="series-play-id-label">-</strong></span>
+            <span class="meta-chip">Progression <strong id="series-play-progress-label">0 / 0</strong></span>
+          </div>
+
+          <div class="live-metrics">
+            <article class="metric-card"><span>Session actuelle</span><strong id="series-current-session-label">-</strong></article>
+            <article class="metric-card"><span>Exercice</span><strong id="series-current-exercise-label">-</strong></article>
+            <article class="metric-card"><span>Statut</span><strong id="series-current-status-label">-</strong></article>
+          </div>
+        </div>
+
+        <div class="series-box">
+          <div class="series-meta">
+            <span class="meta-chip">Série <strong id="series-id-label">-</strong></span>
+            <span class="meta-chip">Statut <strong id="series-status-label">-</strong></span>
+          </div>
+
+          <div class="field">
+            <span>ID de série à consulter</span>
+            <input id="series-id-input" type="number" min="1" placeholder="Exemple : 1" />
+          </div>
+
+          <div class="series-sessions-block">
+            <p class="exercise-label">Exercices générés dans la série</p>
+            <div id="series-sessions-list" class="history-list">
+              <p class="empty-state">Aucune série chargée.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-label">Typing</p>
+            <h2>Session en cours</h2>
+          </div>
+          <div class="meta-inline">
+            <span class="meta-chip">Session <strong id="session-id-label">-</strong></span>
+            <span class="meta-chip">Temps <strong id="timer-label">0.0 s</strong></span>
+          </div>
+        </div>
+
+        <div class="exercise-box">
+          <p class="exercise-label">Texte à taper</p>
+          <div id="reference-text-render" class="reference-render">
+            <span class="empty-state">Lance une série pour commencer.</span>
+          </div>
+        </div>
+
+        <label class="field field-full">
+          <span>Zone de frappe</span>
+          <input id="typing-input" class="typing-input" type="text" placeholder="Commence à taper ici" disabled autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+        </label>
+
+        <div class="live-metrics">
+          <article class="metric-card"><span>Caractères validés</span><strong id="live-char-count">0</strong></article>
+          <article class="metric-card"><span>Progression</span><strong id="live-progress">0%</strong></article>
+          <article class="metric-card"><span>Erreurs</span><strong id="live-error-count">0</strong></article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-label">Session</p>
+            <h2>Résumé de la session courante</h2>
+          </div>
+        </div>
+
+        <div class="results-grid">
+          <article class="metric-card large"><span>WPM</span><strong id="result-wpm">-</strong></article>
+          <article class="metric-card large"><span>Accuracy</span><strong id="result-accuracy">-</strong></article>
+          <article class="metric-card large"><span>Erreurs</span><strong id="result-errors">-</strong></article>
+        </div>
+
+        <div class="analysis-grid">
+          <article class="analysis-card"><h4>Caractères problématiques</h4><ul id="mistakes-by-character" class="list-block"><li class="empty-state">Aucune donnée.</li></ul></article>
+          <article class="analysis-card"><h4>Mots faibles</h4><ul id="weak-words" class="list-block"><li class="empty-state">Aucune donnée.</li></ul></article>
+          <article class="analysis-card"><h4>Séquences difficiles</h4><ul id="weak-sequences" class="list-block"><li class="empty-state">Aucune donnée.</li></ul></article>
+          <article class="analysis-card"><h4>Axes de travail</h4><ul id="suggested-focus" class="list-block"><li class="empty-state">Aucune donnée.</li></ul></article>
+        </div>
+
+        <div class="result-replay-block">
+          <div class="panel-head compact-head">
+            <div>
+              <p class="section-label">Replay</p>
+              <h3>Relecture de la frappe</h3>
+            </div>
+          </div>
+
+          <div class="replay-legend">
+            <span class="legend-chip legend-clean">Correct du premier coup</span>
+            <span class="legend-chip legend-corrected">Corrigé après erreur</span>
+          </div>
+
+          <div id="result-replay-text" class="result-replay-text">
+            <span class="empty-state">Le texte annoté apparaîtra ici après la session.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-label">Série</p>
+            <h2>Résumé agrégé</h2>
+          </div>
+        </div>
+
+        <div class="results-grid">
+          <article class="metric-card large"><span>Sessions complétées</span><strong id="series-completed-sessions">-</strong></article>
+          <article class="metric-card large"><span>WPM moyen</span><strong id="series-average-wpm">-</strong></article>
+          <article class="metric-card large"><span>Accuracy moyenne</span><strong id="series-average-accuracy">-</strong></article>
+        </div>
+
+        <div class="analysis-grid">
+          <article class="analysis-card"><h4>Top caractères</h4><ul id="series-top-characters" class="list-block"><li class="empty-state">Aucune donnée.</li></ul></article>
+          <article class="analysis-card"><h4>Top mots</h4><ul id="series-top-words" class="list-block"><li class="empty-state">Aucune donnée.</li></ul></article>
+          <article class="analysis-card"><h4>Top séquences</h4><ul id="series-top-sequences" class="list-block"><li class="empty-state">Aucune donnée.</li></ul></article>
+          <article class="analysis-card"><h4>Total erreurs</h4><div class="metric-card compact"><strong id="series-total-errors">-</strong></div></article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./js/series.js"></script>
+</body>
+</html>

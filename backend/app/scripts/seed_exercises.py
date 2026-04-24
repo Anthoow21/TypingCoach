@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal, Base, engine
 from app.models.exercise import Exercise
+from app.models.user_preference import UserPreference
 
 TEXT_EXERCISES = [
     {

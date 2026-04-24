@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Typing Coach - Test disposition</title>
+  <meta name="description" content="Teste une disposition clavier directement depuis Typing Coach." />
+  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="./css/layout-test.css" />
+</head>
+<body data-theme="light" class="page-layout-test">
+  <div class="app-shell">
+    <header class="topbar site-nav">
+      <nav class="main-nav" aria-label="Navigation principale">
+        <a href="index.html" class="main-nav-link">Accueil</a>
+        <a href="exercises.html" class="main-nav-link">Exercices</a>
+        <a href="series.html" class="main-nav-link">Series</a>
+        <a href="practice.html" class="main-nav-link">Practice cible</a>
+        <a href="layout-test.html" class="main-nav-link main-nav-link-accent active">Test disposition</a>
+        <a href="history.html" class="main-nav-link">Historique</a>
+        <a href="stats.html" class="main-nav-link">Stats</a>
+      </nav>
+
+      <div class="topbar-actions">
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Basculer le theme">
+          <span class="theme-dot"></span>
+          <span id="theme-label">Mode sombre</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="layout-single">
+      <section class="panel simulator-hero">
+        <div class="panel-head">
+          <div>
+            <p class="section-label">Lab clavier</p>
+            <h2>Test de disposition</h2>
+            <p class="muted page-copy">Choisis une disposition, genere un texte aleatoire et teste-la tout de suite, sans rien installer.</p>
+          </div>
+          <div class="meta-inline">
+            <span class="meta-chip">Disposition <strong id="layout-chip">AZERTY</strong></span>
+            <span class="meta-chip">Temps <strong id="sim-timer-label">0.0 s</strong></span>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <label class="field">
+            <span>Disposition a simuler</span>
+            <select id="sim-layout-select"></select>
+          </label>
+
+          <label class="field">
+            <span>Nombre de mots</span>
+            <select id="sim-word-count-select">
+              <option value="20">20</option>
+              <option value="30" selected>30</option>
+              <option value="40">40</option>
+              <option value="50">50</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="button-row">
+          <button id="sim-generate-btn" class="ghost-button" type="button">Nouveau texte</button>
+          <button id="sim-reset-btn" class="ghost-button" type="button">Recommencer</button>
+          <button id="sim-focus-btn" class="primary-button" type="button">Commencer le test</button>
+        </div>
+      </section>
+
+      <section class="panel simulator-stage">
+        <div class="simulator-stage-copy">
+          <p class="section-label">Test en direct</p>
+          <p class="muted simulator-hint">Le texte reste en haut, et le clavier suit juste en dessous avec la touche attendue et la touche pressee.</p>
+        </div>
+
+        <div class="simulator-text-shell">
+          <div id="sim-reference-text" class="reference-render simulator-reference-render">
+            <span class="empty-state">Genere un texte pour commencer.</span>
+          </div>
+        </div>
+
+        <div class="simulator-keyboard-card">
+          <div id="sim-keyboard" class="simulator-keyboard">
+            <p class="empty-state">Le clavier apparaitra ici.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./js/layout-test.js"></script>
+</body>
+</html>

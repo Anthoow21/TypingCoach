@@ -20,6 +20,7 @@
         <a href="exercises.html" class="main-nav-link">Exercices</a>
         <a href="series.html" class="main-nav-link">Séries</a>
         <a href="practice.html" class="main-nav-link">Practice cible</a>
+        <a href="layout-test.html" class="main-nav-link main-nav-link-accent">Test disposition</a>
         <a href="history.html" class="main-nav-link">Historique</a>
         <a href="stats.html" class="main-nav-link active">Stats</a>
       </nav>
@@ -137,10 +138,16 @@
               <p class="section-label">Heatmap</p>
               <h3>Clavier</h3>
             </div>
-            <div class="tabs keyboard-tabs">
-              <button id="heatmap-mode-usage" class="tab-button active" type="button">Usage</button>
-              <button id="heatmap-mode-errors" class="tab-button" type="button">Erreurs</button>
-              <button id="heatmap-mode-latency" class="tab-button" type="button">Latence</button>
+            <div class="keyboard-controls">
+              <label class="field keyboard-layout-field">
+                <span>Disposition</span>
+                <select id="keyboard-layout-select"></select>
+              </label>
+              <div class="tabs keyboard-tabs">
+                <button id="heatmap-mode-usage" class="tab-button active" type="button">Usage</button>
+                <button id="heatmap-mode-errors" class="tab-button" type="button">Erreurs</button>
+                <button id="heatmap-mode-latency" class="tab-button" type="button">Latence</button>
+              </div>
             </div>
           </div>
 

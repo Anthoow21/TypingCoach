@@ -10,11 +10,13 @@ from app.models.exercise import Exercise
 from app.models.practice_series import PracticeSeries
 from app.models.result import TypingResult
 from app.models.session import TypingSession
-from app.schemas.user_stats import UserStatsResponse
+from app.models.user_preference import UserPreference
+from app.schemas.user_stats import UserKeyboardLayoutUpdate, UserStatsResponse
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
 StatsScope = Literal["standard", "adaptive", "all"]
+AVAILABLE_KEYBOARD_LAYOUTS = ("azerty", "qwerty", "bepo", "dvorak", "colemak")
 
 
 def top_n_from_counter(counter: Counter, limit: int = 5) -> list[list]:
@@ -113,6 +115,28 @@ def get_latency_sequence_stats(payload: dict) -> dict:
     return payload.get("latency_sequence_stats") or payload.get("latency_bigram_stats") or {}
 
 
+def get_or_create_user_preference(user_name: str, db: Session) -> UserPreference:
+    preference = (
+        db.query(UserPreference)
+        .filter(UserPreference.user_name == user_name)
+        .first()
+    )
+
+    if preference:
+        return preference
+
+    preference = UserPreference(user_name=user_name, keyboard_layout="azerty")
+    db.add(preference)
+    db.commit()
+    db.refresh(preference)
+    return preference
+
+
+@router.get("/keyboard-layouts")
+def list_keyboard_layouts():
+    return list(AVAILABLE_KEYBOARD_LAYOUTS)
+
+
 @router.get("/users")
 def list_users_with_results(db: Session = Depends(get_db)):
     rows = (
@@ -149,6 +173,8 @@ def get_user_stats(
 
     if not sessions:
         raise HTTPException(status_code=404, detail="No sessions found for this user")
+
+    preference = get_or_create_user_preference(normalized_user_name, db)
 
     session_ids = [session.id for session in sessions]
 
@@ -231,6 +257,8 @@ def get_user_stats(
     return UserStatsResponse(
         user_name=normalized_user_name,
         stats_scope=scope,
+        keyboard_layout=preference.keyboard_layout,
+        available_keyboard_layouts=list(AVAILABLE_KEYBOARD_LAYOUTS),
         total_sessions=len(sessions),
         total_completed_sessions=total_completed_sessions,
         total_series=len(series),
@@ -289,6 +317,11 @@ def reset_user_stats(user_name: str, db: Session = Depends(get_db)):
         .filter(PracticeSeries.user_name == normalized_user_name)
         .delete(synchronize_session=False)
     )
+    deleted_preferences = (
+        db.query(UserPreference)
+        .filter(UserPreference.user_name == normalized_user_name)
+        .delete(synchronize_session=False)
+    )
 
     db.commit()
 
@@ -298,4 +331,33 @@ def reset_user_stats(user_name: str, db: Session = Depends(get_db)):
         "deleted_results": deleted_results,
         "deleted_analyses": deleted_analyses,
         "deleted_series": deleted_series,
+        "deleted_preferences": deleted_preferences,
+    }
+
+
+@router.put("/user/{user_name}/keyboard-layout")
+def update_user_keyboard_layout(
+    user_name: str,
+    payload: UserKeyboardLayoutUpdate,
+    db: Session = Depends(get_db),
+):
+    normalized_user_name = user_name.strip()
+
+    if not normalized_user_name:
+        raise HTTPException(status_code=400, detail="User name cannot be empty")
+
+    keyboard_layout = payload.keyboard_layout.strip().lower()
+    if keyboard_layout not in AVAILABLE_KEYBOARD_LAYOUTS:
+        raise HTTPException(status_code=400, detail=f"Unsupported keyboard layout: {keyboard_layout}")
+
+    preference = get_or_create_user_preference(normalized_user_name, db)
+    preference.keyboard_layout = keyboard_layout
+    db.add(preference)
+    db.commit()
+    db.refresh(preference)
+
+    return {
+        "user_name": normalized_user_name,
+        "keyboard_layout": preference.keyboard_layout,
+        "available_keyboard_layouts": list(AVAILABLE_KEYBOARD_LAYOUTS),
     }

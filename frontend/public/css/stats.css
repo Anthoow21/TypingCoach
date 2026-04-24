@@ -48,6 +48,25 @@
   margin-bottom: 0;
 }
 
+.keyboard-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.keyboard-layout-field {
+  min-width: 180px;
+}
+
+.keyboard-layout-field span {
+  margin-bottom: 6px;
+}
+
+.keyboard-layout-field select {
+  min-width: 180px;
+}
+
 .keyboard-heatmap {
   display: grid;
   gap: 12px;
@@ -99,6 +118,17 @@
   .keyboard-key {
     min-width: 58px;
     min-height: 64px;
+  }
+
+  .keyboard-controls {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .keyboard-layout-field,
+  .keyboard-layout-field select {
+    width: 100%;
+    min-width: 0;
   }
 
   .keyboard-key-space {

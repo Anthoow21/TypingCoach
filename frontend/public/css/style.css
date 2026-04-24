@@ -736,6 +736,28 @@ textarea:focus {
   position: relative;
 }
 
+.main-nav-link-accent {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(28, 124, 84, 0.2);
+  background: rgba(28, 124, 84, 0.08);
+  color: var(--text);
+}
+
+.main-nav-link-accent:hover {
+  background: rgba(28, 124, 84, 0.14);
+}
+
+.main-nav-link-accent.active {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.main-nav-link-accent.active::after {
+  display: none;
+}
+
 .topbar-actions {
   display: flex;
   align-items: center;

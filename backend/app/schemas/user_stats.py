@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class RecentSessionStats(BaseModel):
@@ -23,6 +23,8 @@ class RecentSeriesStats(BaseModel):
 class UserStatsResponse(BaseModel):
     user_name: str
     stats_scope: str
+    keyboard_layout: str
+    available_keyboard_layouts: list[str]
     total_sessions: int
     total_completed_sessions: int
     total_series: int
@@ -40,3 +42,15 @@ class UserStatsResponse(BaseModel):
     keyboard_heatmap: dict
     recent_sessions: list[RecentSessionStats]
     recent_series: list[RecentSeriesStats]
+
+
+class UserKeyboardLayoutUpdate(BaseModel):
+    keyboard_layout: str
+
+    @field_validator("keyboard_layout")
+    @classmethod
+    def validate_keyboard_layout(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if not normalized:
+            raise ValueError("keyboard_layout cannot be empty")
+        return normalized

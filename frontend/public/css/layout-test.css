@@ -1,0 +1,157 @@
+.page-layout-test .simulator-hero {
+  background:
+    radial-gradient(circle at top right, rgba(28, 124, 84, 0.16), transparent 28%),
+    linear-gradient(135deg, rgba(166, 106, 0, 0.08), transparent 42%),
+    var(--panel);
+}
+
+.page-layout-test .layout-single {
+  gap: 14px;
+}
+
+.simulator-stage {
+  padding-top: 18px;
+  padding-bottom: 26px;
+  cursor: text;
+}
+
+.simulator-stage.is-armed {
+  box-shadow:
+    var(--shadow),
+    0 0 0 1px rgba(28, 124, 84, 0.18);
+}
+
+.simulator-stage-copy {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.simulator-text-shell {
+  padding: 8px 0 18px;
+}
+
+.simulator-reference-render {
+  min-height: 144px;
+  align-items: flex-start;
+  align-content: flex-start;
+  font-size: clamp(1.65rem, 2.4vw, 2.45rem);
+  line-height: 1.55;
+  letter-spacing: 0.01em;
+  gap: 0.4rem 0.24rem;
+}
+
+.simulator-reference-render .char.pending {
+  color: color-mix(in srgb, var(--muted) 72%, transparent);
+}
+
+.simulator-reference-render .char.correct {
+  color: color-mix(in srgb, var(--text) 16%, transparent);
+}
+
+.simulator-reference-render .char.current {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.simulator-reference-render .char.error {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+}
+
+.simulator-keyboard-card {
+  margin-top: 4px;
+  max-width: 760px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.simulator-keyboard {
+  display: grid;
+  gap: 8px;
+  justify-content: center;
+}
+
+.simulator-keyboard-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.simulator-key {
+  min-width: 54px;
+  min-height: 52px;
+  padding: 8px 8px 7px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel-strong) 92%, transparent);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 4px;
+  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.simulator-key strong {
+  font-size: 0.96rem;
+  line-height: 1;
+}
+
+.simulator-key span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+.simulator-key-space {
+  min-width: 186px;
+}
+
+.simulator-key.is-target {
+  border-color: rgba(28, 124, 84, 0.18);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel-strong));
+  box-shadow: inset 0 0 0 1px rgba(28, 124, 84, 0.12);
+}
+
+.simulator-key.is-pressed {
+  transform: translateY(-1px);
+  background: rgba(28, 124, 84, 0.24);
+  border-color: transparent;
+}
+
+.simulator-key.is-error {
+  background: rgba(173, 61, 47, 0.18);
+}
+
+@media (max-width: 720px) {
+  .simulator-stage-copy {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .simulator-key {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 7px 6px 6px;
+  }
+
+  .simulator-key strong {
+    font-size: 0.82rem;
+  }
+
+  .simulator-key span {
+    font-size: 0.58rem;
+  }
+
+  .simulator-key-space {
+    min-width: 132px;
+  }
+
+  .simulator-reference-render {
+    min-height: 120px;
+    font-size: clamp(1.18rem, 6vw, 1.6rem);
+  }
+}

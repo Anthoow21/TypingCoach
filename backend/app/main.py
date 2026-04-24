@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.core.database import Base, engine
-from app.models import DetailedAnalysis, Exercise, PracticeSeries, TypingResult, TypingSession
+from app.models import DetailedAnalysis, Exercise, PracticeSeries, TypingResult, TypingSession, UserPreference
 
 app = FastAPI(title="Typing Coach Backend")
 

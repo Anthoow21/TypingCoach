@@ -30,6 +30,7 @@ def create_practice_series(payload: PracticeSeriesCreate, db: Session = Depends(
     exercises = (
         db.query(Exercise)
         .filter(Exercise.exercise_type.in_(payload.exercise_modes))
+        .filter(Exercise.difficulty != "adaptive")
         .all()
     )
 
@@ -132,13 +133,13 @@ def get_practice_series_summary(series_id: int, db: Session = Depends(get_db)):
 
     char_counter = Counter()
     word_counter = Counter()
-    bigram_counter = Counter()
+    sequence_counter = Counter()
 
     for analysis in analyses:
         payload = analysis.analysis_payload or {}
         char_counter.update(payload.get("mistakes_by_character", {}))
         word_counter.update(payload.get("weak_words", {}))
-        bigram_counter.update(payload.get("weak_bigrams", {}))
+        sequence_counter.update(payload.get("weak_sequences") or payload.get("weak_bigrams", {}))
 
     if completed_sessions == series.total_exercises and series.status != "completed":
         series.status = "completed"
@@ -154,5 +155,5 @@ def get_practice_series_summary(series_id: int, db: Session = Depends(get_db)):
         total_errors=total_errors,
         top_characters=top_n_from_counter(char_counter, 5),
         top_words=top_n_from_counter(word_counter, 5),
-        top_bigrams=top_n_from_counter(bigram_counter, 5),
+        top_sequences=top_n_from_counter(sequence_counter, 5),
     )

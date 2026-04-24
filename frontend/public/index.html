@@ -6,23 +6,20 @@
   <title>Typing Coach</title>
   <meta
     name="description"
-    content="Plateforme de dactylographie intelligente avec analyse détaillée."
+    content="Plateforme de dactylographie intelligente avec analyse detaillee."
   />
-  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="./css/style.css" />
 </head>
 <body data-theme="light">
   <div class="app-shell">
-    <header class="topbar">
-      <div class="brand-block">
-        <p class="eyebrow">Typing Coach</p>
-        <h1>Practice with signal, not noise.</h1>
-        <p class="lede">
-          Une interface de dactylographie sobre, pensée pour pratiquer, analyser et progresser.
-        </p>
-      </div>
+    <header class="topbar site-nav">
+      <nav class="main-nav" aria-label="Navigation principale">
+        <a href="index.html" class="main-nav-link active">Practice</a>
+        <a href="stats.html" class="main-nav-link">Stats</a>
+      </nav>
 
       <div class="topbar-actions">
-        <button id="theme-toggle" class="ghost-button" type="button" aria-label="Basculer le thème">
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Basculer le theme">
           <span class="theme-dot"></span>
           <span id="theme-label">Mode sombre</span>
         </button>
@@ -34,7 +31,7 @@
         <div class="panel-head">
           <div>
             <p class="section-label">Configuration</p>
-            <h2>Créer un exercice</h2>
+            <h2>Creer un exercice</h2>
           </div>
         </div>
 
@@ -50,7 +47,7 @@
               <input
                 id="text-exercise-title"
                 type="text"
-                placeholder="Exemple : Accents français niveau 1"
+                placeholder="Exemple : Accents francais niveau 1"
               />
             </label>
 
@@ -59,20 +56,20 @@
               <textarea
                 id="text-exercise-content"
                 rows="5"
-                placeholder="Saisis ici un texte complet à taper."
+                placeholder="Saisis ici un texte complet a taper."
               ></textarea>
             </label>
 
             <label class="field">
               <span>Langue</span>
               <select id="text-exercise-language">
-                <option value="fr">Français</option>
+                <option value="fr">Francais</option>
                 <option value="en">English</option>
               </select>
             </label>
 
             <label class="field">
-              <span>Difficulté</span>
+              <span>Difficulte</span>
               <select id="text-exercise-difficulty">
                 <option value="easy">Easy</option>
                 <option value="medium">Medium</option>
@@ -83,7 +80,7 @@
 
           <div class="button-row">
             <button id="create-text-exercise-btn" class="primary-button" type="button">
-              Créer l’exercice texte
+              Creer l'exercice texte
             </button>
           </div>
         </div>
@@ -95,7 +92,7 @@
               <input
                 id="word-list-title"
                 type="text"
-                placeholder="Exemple : Mots courts fréquents"
+                placeholder="Exemple : Mots courts frequents"
               />
             </label>
 
@@ -111,13 +108,13 @@
             <label class="field">
               <span>Langue</span>
               <select id="word-list-language">
-                <option value="fr">Français</option>
+                <option value="fr">Francais</option>
                 <option value="en">English</option>
               </select>
             </label>
 
             <label class="field">
-              <span>Difficulté</span>
+              <span>Difficulte</span>
               <select id="word-list-difficulty">
                 <option value="easy">Easy</option>
                 <option value="medium">Medium</option>
@@ -128,7 +125,7 @@
 
           <div class="button-row">
             <button id="create-word-list-exercise-btn" class="primary-button" type="button">
-              Créer la liste de mots
+              Creer la liste de mots
             </button>
           </div>
         </div>
@@ -141,20 +138,20 @@
             <h2>Lancer un test</h2>
           </div>
           <div class="meta-inline">
-            <span class="meta-chip">Session <strong id="session-id-label">—</strong></span>
+            <span class="meta-chip">Session <strong id="session-id-label">-</strong></span>
             <span class="meta-chip">Temps <strong id="timer-label">0.0 s</strong></span>
           </div>
         </div>
 
         <div class="tabs">
           <button id="mode-single-tab" class="tab-button active" type="button">Session unique</button>
-          <button id="mode-series-tab" class="tab-button" type="button">Série d’entraînement</button>
+          <button id="mode-series-tab" class="tab-button" type="button">Serie d'entrainement</button>
         </div>
 
         <div id="single-practice-panel">
           <div class="form-grid">
             <label class="field">
-              <span>Nom affiché</span>
+              <span>Nom affiche</span>
               <input id="user-name" type="text" placeholder="Anthony" />
             </label>
 
@@ -179,18 +176,43 @@
 
           <div class="button-row">
             <button id="refresh-exercises-btn" class="ghost-button" type="button">Actualiser</button>
-            <button id="random-session-btn" class="ghost-button" type="button">Exercice aléatoire</button>
+            <button id="random-session-btn" class="ghost-button" type="button">Exercice aleatoire</button>
             <button id="start-session-btn" class="primary-button" type="button">
               Lancer la session
             </button>
             <button id="reset-session-btn" class="ghost-button" type="button">
-              Réinitialiser
+              Reinitialiser
             </button>
+          </div>
+
+          <div class="targeted-training-box">
+            <div class="panel-head compact-head">
+              <div>
+                <p class="section-label">Adaptive Practice</p>
+                <h3>Entrainement cible</h3>
+              </div>
+              <button id="load-recommendations-btn" class="ghost-button" type="button">
+                Charger
+              </button>
+            </div>
+
+            <p id="recommendations-status" class="muted">
+              Renseigne ton nom puis charge tes recommandations personnalisees.
+            </p>
+
+            <div id="recommendations-summary" class="recommendations-summary hidden">
+              <span class="meta-chip">Erreurs/sequences <strong id="reco-errors-label">-</strong></span>
+              <span class="meta-chip">Lenteurs <strong id="reco-latency-label">-</strong></span>
+            </div>
+
+            <div id="recommendations-list" class="recommendations-list">
+              <p class="empty-state">Aucune recommandation chargee.</p>
+            </div>
           </div>
 
           <div class="typing-zone">
             <div class="exercise-box">
-              <p class="exercise-label">Texte à taper</p>
+              <p class="exercise-label">Texte a taper</p>
               <div id="reference-text-render" class="reference-render">
                 <span class="empty-state">Lance une session pour commencer.</span>
               </div>
@@ -202,7 +224,7 @@
                 id="typing-input"
                 class="typing-input"
                 type="text"
-                placeholder="Commence à taper ici"
+                placeholder="Commence a taper ici"
                 disabled
                 autocomplete="off"
                 autocorrect="off"
@@ -213,7 +235,7 @@
 
             <div class="live-metrics">
               <article class="metric-card">
-                <span>Caractères validés</span>
+                <span>Caracteres valides</span>
                 <strong id="live-char-count">0</strong>
               </article>
               <article class="metric-card">
@@ -231,12 +253,12 @@
         <div id="series-practice-panel" class="hidden">
           <div class="form-grid">
             <label class="field">
-              <span>Nom affiché</span>
+              <span>Nom affiche</span>
               <input id="series-user-name" type="text" placeholder="Anthony" />
             </label>
 
             <label class="field">
-              <span>Nombre d’exercices</span>
+              <span>Nombre d'exercices</span>
               <select id="series-count-select">
                 <option value="5">5</option>
                 <option value="10" selected>10</option>
@@ -246,7 +268,7 @@
             </label>
 
             <label class="field field-full">
-              <span>Type d’exercices</span>
+              <span>Type d'exercices</span>
               <div class="checkbox-group">
                 <label class="check-pill">
                   <input type="checkbox" id="series-mode-text" checked />
@@ -261,7 +283,7 @@
             </label>
 
             <div id="series-word-counts-field" class="field field-full">
-              <span>Tailles autorisées pour les listes de mots</span>
+              <span>Tailles autorisees pour les listes de mots</span>
               <div class="checkbox-group">
                 <label class="check-pill">
                   <input type="checkbox" class="series-word-count-checkbox" value="25" checked />
@@ -289,50 +311,50 @@
 
           <div class="button-row">
             <button id="start-series-btn" class="primary-button" type="button">
-              Lancer une série
+              Lancer une serie
             </button>
             <button id="load-series-summary-btn" class="ghost-button" type="button">
-              Charger le résumé
+              Charger le resume
             </button>
           </div>
 
           <div id="series-progress-box" class="series-box hidden">
             <div class="series-meta">
-              <span class="meta-chip">Série <strong id="series-play-id-label">—</strong></span>
+              <span class="meta-chip">Serie <strong id="series-play-id-label">-</strong></span>
               <span class="meta-chip">Progression <strong id="series-play-progress-label">0 / 0</strong></span>
             </div>
 
             <div class="live-metrics">
               <article class="metric-card">
                 <span>Session actuelle</span>
-                <strong id="series-current-session-label">—</strong>
+                <strong id="series-current-session-label">-</strong>
               </article>
               <article class="metric-card">
                 <span>Exercice</span>
-                <strong id="series-current-exercise-label">—</strong>
+                <strong id="series-current-exercise-label">-</strong>
               </article>
               <article class="metric-card">
                 <span>Statut</span>
-                <strong id="series-current-status-label">—</strong>
+                <strong id="series-current-status-label">-</strong>
               </article>
             </div>
           </div>
 
           <div class="series-box">
             <div class="series-meta">
-              <span class="meta-chip">Série <strong id="series-id-label">—</strong></span>
-              <span class="meta-chip">Statut <strong id="series-status-label">—</strong></span>
+              <span class="meta-chip">Serie <strong id="series-id-label">-</strong></span>
+              <span class="meta-chip">Statut <strong id="series-status-label">-</strong></span>
             </div>
 
             <div class="field">
-              <span>ID de série à consulter</span>
+              <span>ID de serie a consulter</span>
               <input id="series-id-input" type="number" min="1" placeholder="Exemple : 1" />
             </div>
 
             <div class="series-sessions-block">
-              <p class="exercise-label">Exercices générés dans la série</p>
+              <p class="exercise-label">Exercices generes dans la serie</p>
               <div id="series-sessions-list" class="history-list">
-                <p class="empty-state">Aucune série chargée.</p>
+                <p class="empty-state">Aucune serie chargee.</p>
               </div>
             </div>
           </div>
@@ -343,51 +365,51 @@
         <div class="panel-head">
           <div>
             <p class="section-label">Results</p>
-            <h2>Résultat de session</h2>
+            <h2>Resultat de session</h2>
           </div>
         </div>
 
         <div class="results-grid">
           <article class="metric-card large">
             <span>WPM</span>
-            <strong id="result-wpm">—</strong>
+            <strong id="result-wpm">-</strong>
           </article>
           <article class="metric-card large">
             <span>Accuracy</span>
-            <strong id="result-accuracy">—</strong>
+            <strong id="result-accuracy">-</strong>
           </article>
           <article class="metric-card large">
             <span>Errors</span>
-            <strong id="result-errors">—</strong>
+            <strong id="result-errors">-</strong>
           </article>
         </div>
 
         <div class="analysis-grid">
           <article class="analysis-card">
-            <h4>Caractères problématiques</h4>
+            <h4>Caracteres problematiques</h4>
             <ul id="mistakes-by-character" class="list-block">
-              <li class="empty-state">Aucune donnée.</li>
+              <li class="empty-state">Aucune donnee.</li>
             </ul>
           </article>
 
           <article class="analysis-card">
             <h4>Mots faibles</h4>
             <ul id="weak-words" class="list-block">
-              <li class="empty-state">Aucune donnée.</li>
+              <li class="empty-state">Aucune donnee.</li>
             </ul>
           </article>
 
           <article class="analysis-card">
-            <h4>Bigrammes faibles</h4>
-            <ul id="weak-bigrams" class="list-block">
-              <li class="empty-state">Aucune donnée.</li>
+            <h4>Sequences difficiles</h4>
+            <ul id="weak-sequences" class="list-block">
+              <li class="empty-state">Aucune donnee.</li>
             </ul>
           </article>
 
           <article class="analysis-card">
             <h4>Axes de travail</h4>
             <ul id="suggested-focus" class="list-block">
-              <li class="empty-state">Aucune donnée.</li>
+              <li class="empty-state">Aucune donnee.</li>
             </ul>
           </article>
         </div>
@@ -402,11 +424,11 @@
 
           <div class="replay-legend">
             <span class="legend-chip legend-clean">Correct du premier coup</span>
-            <span class="legend-chip legend-corrected">Corrigé après erreur</span>
+            <span class="legend-chip legend-corrected">Corrige apres erreur</span>
           </div>
 
           <div id="result-replay-text" class="result-replay-text">
-            <span class="empty-state">Le texte annoté apparaîtra ici après la session.</span>
+            <span class="empty-state">Le texte annote apparaitra ici apres la session.</span>
           </div>
         </div>
       </section>
@@ -415,51 +437,51 @@
         <div class="panel-head">
           <div>
             <p class="section-label">Series Summary</p>
-            <h2>Résumé agrégé</h2>
+            <h2>Resume agrege</h2>
           </div>
         </div>
 
         <div class="results-grid">
           <article class="metric-card large">
-            <span>Sessions complétées</span>
-            <strong id="series-completed-sessions">—</strong>
+            <span>Sessions completees</span>
+            <strong id="series-completed-sessions">-</strong>
           </article>
           <article class="metric-card large">
             <span>WPM moyen</span>
-            <strong id="series-average-wpm">—</strong>
+            <strong id="series-average-wpm">-</strong>
           </article>
           <article class="metric-card large">
             <span>Accuracy moyenne</span>
-            <strong id="series-average-accuracy">—</strong>
+            <strong id="series-average-accuracy">-</strong>
           </article>
         </div>
 
         <div class="analysis-grid">
           <article class="analysis-card">
-            <h4>Top caractères</h4>
+            <h4>Top caracteres</h4>
             <ul id="series-top-characters" class="list-block">
-              <li class="empty-state">Aucune donnée.</li>
+              <li class="empty-state">Aucune donnee.</li>
             </ul>
           </article>
 
           <article class="analysis-card">
             <h4>Top mots</h4>
             <ul id="series-top-words" class="list-block">
-              <li class="empty-state">Aucune donnée.</li>
+              <li class="empty-state">Aucune donnee.</li>
             </ul>
           </article>
 
           <article class="analysis-card">
-            <h4>Top bigrammes</h4>
-            <ul id="series-top-bigrams" class="list-block">
-              <li class="empty-state">Aucune donnée.</li>
+            <h4>Top sequences</h4>
+            <ul id="series-top-sequences" class="list-block">
+              <li class="empty-state">Aucune donnee.</li>
             </ul>
           </article>
 
           <article class="analysis-card">
             <h4>Total erreurs</h4>
             <div class="metric-card compact">
-              <strong id="series-total-errors">—</strong>
+              <strong id="series-total-errors">-</strong>
             </div>
           </article>
         </div>
@@ -469,16 +491,16 @@
         <div class="panel-head">
           <div>
             <p class="section-label">History</p>
-            <h2>Derniers résultats</h2>
+            <h2>Derniers resultats</h2>
           </div>
           <button id="refresh-results-btn" class="ghost-button" type="button">Recharger</button>
         </div>
 
         <div id="results-history" class="history-list">
-          <p class="empty-state">Aucun résultat pour le moment.</p>
+          <p class="empty-state">Aucun resultat pour le moment.</p>
         </div>
         <div id="history-pagination" class="history-pagination hidden">
-          <button id="history-prev-btn" class="ghost-button" type="button">Précédent</button>
+          <button id="history-prev-btn" class="ghost-button" type="button">Precedent</button>
           <span id="history-page-label" class="pagination-label">Page 1 / 1</span>
           <button id="history-next-btn" class="ghost-button" type="button">Suivant</button>
         </div>
@@ -497,44 +519,44 @@
           <div class="results-grid">
             <article class="metric-card">
               <span>WPM</span>
-              <strong id="modal-wpm">—</strong>
+              <strong id="modal-wpm">-</strong>
             </article>
             <article class="metric-card">
               <span>Accuracy</span>
-              <strong id="modal-accuracy">—</strong>
+              <strong id="modal-accuracy">-</strong>
             </article>
             <article class="metric-card">
               <span>Errors</span>
-              <strong id="modal-errors">—</strong>
+              <strong id="modal-errors">-</strong>
             </article>
           </div>
 
           <div class="analysis-grid">
             <article class="analysis-card">
-              <h4>Caractères problématiques</h4>
+              <h4>Caracteres problematiques</h4>
               <ul id="modal-mistakes-by-character" class="list-block">
-                <li class="empty-state">Aucune donnée.</li>
+                <li class="empty-state">Aucune donnee.</li>
               </ul>
             </article>
 
             <article class="analysis-card">
               <h4>Mots faibles</h4>
               <ul id="modal-weak-words" class="list-block">
-                <li class="empty-state">Aucune donnée.</li>
+                <li class="empty-state">Aucune donnee.</li>
               </ul>
             </article>
 
             <article class="analysis-card">
-              <h4>Bigrammes faibles</h4>
-              <ul id="modal-weak-bigrams" class="list-block">
-                <li class="empty-state">Aucune donnée.</li>
+              <h4>Sequences difficiles</h4>
+              <ul id="modal-weak-sequences" class="list-block">
+                <li class="empty-state">Aucune donnee.</li>
               </ul>
             </article>
 
             <article class="analysis-card">
               <h4>Axes de travail</h4>
               <ul id="modal-suggested-focus" class="list-block">
-                <li class="empty-state">Aucune donnée.</li>
+                <li class="empty-state">Aucune donnee.</li>
               </ul>
             </article>
           </div>
@@ -543,6 +565,6 @@
     </main>
   </div>
 
-  <script src="./app.js"></script>
+  <script src="./js/app.js"></script>
 </body>
 </html>

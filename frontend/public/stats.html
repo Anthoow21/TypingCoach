@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Typing Coach - Stats</title>
+  <meta
+    name="description"
+    content="Statistiques utilisateur de Typing Coach."
+  />
+
+  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="./css/stats.css" />
+</head>
+<body data-theme="light">
+  <div class="app-shell">
+    <header class="topbar site-nav">
+      <nav class="main-nav" aria-label="Navigation principale">
+        <a href="index.html" class="main-nav-link">Practice</a>
+        <a href="stats.html" class="main-nav-link active">Stats</a>
+      </nav>
+
+      <div class="topbar-actions">
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Basculer le thème">
+          <span class="theme-dot"></span>
+          <span id="theme-label">Mode sombre</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="layout-single">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-label">User Stats</p>
+            <h2>Statistiques utilisateur</h2>
+          </div>
+          <div class="stats-actions">
+            <button id="load-user-stats-btn" class="ghost-button" type="button">Charger</button>
+            <button id="reset-user-stats-btn" class="ghost-button danger-button" type="button">Reset stats</button>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <label class="field field-full">
+            <span>Nom utilisateur</span>
+            <input id="stats-user-name" type="text" placeholder="Anthony" list="stats-user-suggestions" />
+          </label>
+        </div>
+
+        <datalist id="stats-user-suggestions"></datalist>
+
+        <div class="tabs stats-scope-tabs" aria-label="Portee des statistiques">
+          <button id="stats-scope-standard" class="tab-button active" type="button">Stats normales</button>
+          <button id="stats-scope-adaptive" class="tab-button" type="button">Practice cible</button>
+        </div>
+
+        <div class="results-grid">
+          <article class="metric-card">
+            <span>Sessions</span>
+            <strong id="total-sessions">-</strong>
+          </article>
+          <article class="metric-card">
+            <span>WPM moyen</span>
+            <strong id="avg-wpm">-</strong>
+          </article>
+          <article class="metric-card">
+            <span>Accuracy</span>
+            <strong id="avg-accuracy">-</strong>
+          </article>
+        </div>
+
+        <div class="analysis-grid">
+          <article class="analysis-card">
+            <h4>Top caracteres</h4>
+            <ul id="top-characters" class="list-block">
+              <li class="empty-state">Aucune donnee.</li>
+            </ul>
+          </article>
+
+          <article class="analysis-card">
+            <h4>Top mots</h4>
+            <ul id="top-words" class="list-block">
+              <li class="empty-state">Aucune donnee.</li>
+            </ul>
+          </article>
+
+          <article class="analysis-card">
+            <h4>Top sequences</h4>
+            <ul id="top-sequences" class="list-block">
+              <li class="empty-state">Aucune donnee.</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="panel-head stats-subhead">
+          <div>
+            <p class="section-label">Latency</p>
+            <h3>Indicateurs temporels</h3>
+          </div>
+        </div>
+
+        <div class="results-grid">
+          <article class="metric-card">
+            <span>Latence moyenne</span>
+            <strong id="avg-latency-mean">-</strong>
+          </article>
+          <article class="metric-card">
+            <span>Latence p95</span>
+            <strong id="avg-latency-p95">-</strong>
+          </article>
+        </div>
+
+        <div class="analysis-grid">
+          <article class="analysis-card">
+            <h4>Touches les plus lentes</h4>
+            <ul id="top-slow-characters" class="list-block">
+              <li class="empty-state">Aucune donnee.</li>
+            </ul>
+          </article>
+
+          <article class="analysis-card">
+            <h4>Sequences les plus lentes</h4>
+            <ul id="top-slow-sequences" class="list-block">
+              <li class="empty-state">Aucune donnee.</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="analysis-card keyboard-card">
+          <div class="panel-head compact-head">
+            <div>
+              <p class="section-label">Heatmap</p>
+              <h3>Clavier</h3>
+            </div>
+            <div class="tabs keyboard-tabs">
+              <button id="heatmap-mode-usage" class="tab-button active" type="button">Usage</button>
+              <button id="heatmap-mode-errors" class="tab-button" type="button">Erreurs</button>
+              <button id="heatmap-mode-latency" class="tab-button" type="button">Latence</button>
+            </div>
+          </div>
+
+          <p id="keyboard-heatmap-caption" class="muted">
+            Chaque touche affiche le nombre de frappes validees.
+          </p>
+
+          <div id="keyboard-heatmap" class="keyboard-heatmap">
+            <p class="empty-state">Charge des statistiques pour afficher la heatmap clavier.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./js/api.js"></script>
+  <script src="./js/stats.js"></script>
+</body>
+</html>

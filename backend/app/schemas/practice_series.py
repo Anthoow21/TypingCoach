@@ -1,13 +1,21 @@
 from datetime import datetime
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class PracticeSeriesCreate(BaseModel):
-    user_name: str | None = None
+    user_name: str
     number_of_exercises: int
-    exercise_modes: list[str] = ["text", "word_list"]
-    allowed_word_counts: list[int] = [25, 40, 50, 75, 100]
+    exercise_modes: list[str] = Field(default_factory=lambda: ["text", "word_list"])
+    allowed_word_counts: list[int] = Field(default_factory=lambda: [25, 40, 50, 75, 100])
+
+    @field_validator("user_name")
+    @classmethod
+    def validate_user_name(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("user_name is required")
+        return normalized
 
     @field_validator("number_of_exercises")
     @classmethod
@@ -56,4 +64,4 @@ class PracticeSeriesSummaryResponse(BaseModel):
     total_errors: int
     top_characters: list[list]
     top_words: list[list]
-    top_bigrams: list[list]
+    top_sequences: list[list]

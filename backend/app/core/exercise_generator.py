@@ -13,7 +13,20 @@ def generate_reference_text(exercise_type: str, content: str, word_count: int | 
         if word_count is None:
             raise ValueError("word_count is required for word_list exercises")
 
-        generated_words = [random.choice(raw_words) for _ in range(word_count)]
+        if word_count <= len(raw_words):
+            generated_words = random.sample(raw_words, word_count)
+        else:
+            generated_words = []
+            pool = raw_words[:]
+            random.shuffle(pool)
+
+            while len(generated_words) < word_count:
+                if not pool:
+                    pool = raw_words[:]
+                    random.shuffle(pool)
+
+                generated_words.append(pool.pop())
+
         return " ".join(generated_words)
 
     raise ValueError(f"Unsupported exercise_type: {exercise_type}")

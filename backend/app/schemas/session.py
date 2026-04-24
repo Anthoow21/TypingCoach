@@ -1,14 +1,22 @@
 from datetime import datetime
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
-from app.schemas.analysis import ErrorEvent
+from app.schemas.analysis import ErrorEvent, KeyEvent
 
 
 class SessionCreate(BaseModel):
     exercise_id: int
-    user_name: str | None = None
+    user_name: str
     word_count: int | None = None
+
+    @field_validator("user_name")
+    @classmethod
+    def validate_user_name(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("user_name is required")
+        return normalized
 
     @field_validator("word_count")
     @classmethod
@@ -25,6 +33,7 @@ class SessionComplete(BaseModel):
     duration_seconds: float
     error_count: int
     error_events: list[ErrorEvent]
+    key_events: list[KeyEvent] = Field(default_factory=list)
 
 
 class SessionResponse(BaseModel):

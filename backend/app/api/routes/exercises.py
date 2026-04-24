@@ -25,7 +25,12 @@ def create_exercise(payload: ExerciseCreate, db: Session = Depends(get_db)):
 
 @router.get("", response_model=list[ExerciseResponse])
 def list_exercises(db: Session = Depends(get_db)):
-    return db.query(Exercise).order_by(Exercise.id.asc()).all()
+    return (
+        db.query(Exercise)
+        .filter(Exercise.difficulty != "adaptive")
+        .order_by(Exercise.id.asc())
+        .all()
+    )
 
 
 @router.get("/{exercise_id}", response_model=ExerciseResponse)

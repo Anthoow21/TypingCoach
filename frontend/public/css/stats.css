@@ -1,0 +1,111 @@
+.stats-mini-item {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+}
+
+.stats-mini-item strong {
+  font-size: 1rem;
+}
+
+.stats-mini-item span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.stats-subhead {
+  margin-top: 24px;
+}
+
+.stats-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.stats-scope-tabs {
+  margin: 18px 0 6px;
+}
+
+.danger-button {
+  color: var(--danger);
+  border-color: rgba(173, 61, 47, 0.22);
+}
+
+.danger-button:hover {
+  background: var(--danger-soft);
+}
+
+.keyboard-card {
+  margin-top: 18px;
+}
+
+.keyboard-tabs {
+  margin-bottom: 0;
+}
+
+.keyboard-heatmap {
+  display: grid;
+  gap: 12px;
+}
+
+.keyboard-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.keyboard-key {
+  min-width: 72px;
+  min-height: 72px;
+  padding: 12px 10px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.keyboard-key strong {
+  font-size: 0.92rem;
+}
+
+.keyboard-key span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.keyboard-key-space {
+  min-width: 240px;
+}
+
+.keyboard-key-backspace {
+  min-width: 140px;
+}
+
+@media (max-width: 720px) {
+  .stats-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .keyboard-key {
+    min-width: 58px;
+    min-height: 64px;
+  }
+
+  .keyboard-key-space {
+    min-width: 180px;
+  }
+
+  .keyboard-key-backspace {
+    min-width: 110px;
+  }
+}

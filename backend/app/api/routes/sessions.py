@@ -58,7 +58,8 @@ def complete_session(session_id: int, payload: SessionComplete, db: Session = De
         typed_text=payload.typed_text,
         duration_seconds=payload.duration_seconds,
         error_count=payload.error_count,
-        error_events=payload.error_events
+        error_events=payload.error_events,
+        key_events=payload.key_events,
     )
 
     try:
@@ -77,6 +78,7 @@ def complete_session(session_id: int, payload: SessionComplete, db: Session = De
         **analysis_data,
         "reference_text": session.reference_text,
         "error_events": [event.model_dump() for event in payload.error_events],
+        "key_events": [event.model_dump() for event in payload.key_events],
     }
 
     detailed_analysis = DetailedAnalysis(

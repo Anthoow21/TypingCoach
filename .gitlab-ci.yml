@@ -1,0 +1,198 @@
+stages:
+  - build
+  - validate
+  - test
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  ANSIBLE_IMAGE: dvp-srv-gitlab.campus12avenue.fr:5050/root/tp1:latest
+  DEV_HOST: "172.16.20.36"
+  PROD_HOST: "172.16.20.35"
+
+# ─────────────────────────────────────────────────────────────────
+#  TEMPLATES
+# ─────────────────────────────────────────────────────────────────
+
+.docker_build:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  tags:
+    - docker
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+
+.ansible_base:
+  image: $ANSIBLE_IMAGE
+  tags:
+    - docker
+  before_script:
+    - mkdir -p ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - ansible-galaxy collection install -r infra/ansible/requirements.yml
+
+.ansible_prod:
+  extends: .ansible_base
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+.ansible_dev:
+  extends: .ansible_base
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+# ─────────────────────────────────────────────────────────────────
+#  BUILD
+#  develop → tag  dev-<sha>  +  develop   (pour vérifier que ça compile)
+#  main    → tag  <sha>      +  latest    (images de prod)
+# ─────────────────────────────────────────────────────────────────
+
+build_frontend:
+  extends: .docker_build
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      variables:
+        IMAGE_TAG: "dev-${CI_COMMIT_SHORT_SHA}"
+        CACHE_TAG: "develop"
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      variables:
+        IMAGE_TAG: "${CI_COMMIT_SHORT_SHA}"
+        CACHE_TAG: "latest"
+  script:
+    - docker pull "${CI_REGISTRY_IMAGE}/frontend:${CACHE_TAG}" || true
+    - docker build
+        --cache-from "${CI_REGISTRY_IMAGE}/frontend:${CACHE_TAG}"
+        -t "${CI_REGISTRY_IMAGE}/frontend:${IMAGE_TAG}"
+        -t "${CI_REGISTRY_IMAGE}/frontend:${CACHE_TAG}"
+        ./frontend
+    - docker push "${CI_REGISTRY_IMAGE}/frontend:${IMAGE_TAG}"
+    - docker push "${CI_REGISTRY_IMAGE}/frontend:${CACHE_TAG}"
+
+build_backend:
+  extends: .docker_build
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      variables:
+        IMAGE_TAG: "dev-${CI_COMMIT_SHORT_SHA}"
+        CACHE_TAG: "develop"
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      variables:
+        IMAGE_TAG: "${CI_COMMIT_SHORT_SHA}"
+        CACHE_TAG: "latest"
+  script:
+    - docker pull "${CI_REGISTRY_IMAGE}/backend:${CACHE_TAG}" || true
+    - docker build
+        --cache-from "${CI_REGISTRY_IMAGE}/backend:${CACHE_TAG}"
+        -t "${CI_REGISTRY_IMAGE}/backend:${IMAGE_TAG}"
+        -t "${CI_REGISTRY_IMAGE}/backend:${CACHE_TAG}"
+        ./backend
+    - docker push "${CI_REGISTRY_IMAGE}/backend:${IMAGE_TAG}"
+    - docker push "${CI_REGISTRY_IMAGE}/backend:${CACHE_TAG}"
+
+build_analysis:
+  extends: .docker_build
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      variables:
+        IMAGE_TAG: "dev-${CI_COMMIT_SHORT_SHA}"
+        CACHE_TAG: "develop"
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      variables:
+        IMAGE_TAG: "${CI_COMMIT_SHORT_SHA}"
+        CACHE_TAG: "latest"
+  script:
+    - docker pull "${CI_REGISTRY_IMAGE}/analysis:${CACHE_TAG}" || true
+    - docker build
+        --cache-from "${CI_REGISTRY_IMAGE}/analysis:${CACHE_TAG}"
+        -t "${CI_REGISTRY_IMAGE}/analysis:${IMAGE_TAG}"
+        -t "${CI_REGISTRY_IMAGE}/analysis:${CACHE_TAG}"
+        ./analysis
+    - docker push "${CI_REGISTRY_IMAGE}/analysis:${IMAGE_TAG}"
+    - docker push "${CI_REGISTRY_IMAGE}/analysis:${CACHE_TAG}"
+
+# ─────────────────────────────────────────────────────────────────
+#  VALIDATE  —  syntaxe Ansible
+# ─────────────────────────────────────────────────────────────────
+
+validate_playbook_dev:
+  extends: .ansible_dev
+  stage: validate
+  script:
+    - ansible-playbook --syntax-check
+        -i infra/ansible/inventories/dev.yml
+        infra/ansible/playbooks/deploy_stack.yml
+
+validate_playbook:
+  extends: .ansible_prod
+  stage: validate
+  script:
+    - ansible-playbook --syntax-check
+        -i infra/ansible/inventories/prod.yml
+        infra/ansible/playbooks/deploy_stack.yml
+
+# ─────────────────────────────────────────────────────────────────
+#  TEST  —  ping VM
+# ─────────────────────────────────────────────────────────────────
+
+test_connectivity_dev:
+  extends: .ansible_dev
+  stage: test
+  script:
+    - ansible -i infra/ansible/inventories/dev.yml all -u ansible -m ping
+
+test_connectivity:
+  extends: .ansible_prod
+  stage: test
+  script:
+    - ansible -i infra/ansible/inventories/prod.yml all -u ansible -m ping
+
+# ─────────────────────────────────────────────────────────────────
+#  DEPLOY  —  MANUEL (bouton dans GitLab)
+#  Variables GitLab requises : SSH_PRIVATE_KEY, SSH_KNOWN_HOSTS,
+#                              REGISTRY_API_TOKEN, DB_PASSWORD
+#  Note : SSH_KNOWN_HOSTS doit contenir les deux IPs (dev + prod)
+# ─────────────────────────────────────────────────────────────────
+
+deploy_dev:
+  extends: .ansible_dev
+  stage: deploy
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      when: manual
+  environment:
+    name: development
+    url: http://172.16.20.36:3000
+  script:
+    - export FRONTEND_IMAGE="${CI_REGISTRY_IMAGE}/frontend:dev-${CI_COMMIT_SHORT_SHA}"
+    - export BACKEND_IMAGE="${CI_REGISTRY_IMAGE}/backend:dev-${CI_COMMIT_SHORT_SHA}"
+    - export ANALYSIS_IMAGE="${CI_REGISTRY_IMAGE}/analysis:dev-${CI_COMMIT_SHORT_SHA}"
+    - export APP_ENV="development"
+    - ansible-playbook
+        -i infra/ansible/inventories/dev.yml
+        -u ansible
+        infra/ansible/playbooks/deploy_stack.yml
+
+deploy:
+  extends: .ansible_prod
+  stage: deploy
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+  environment:
+    name: production
+    url: http://172.16.20.35:3000
+  script:
+    - export FRONTEND_IMAGE="${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHORT_SHA}"
+    - export BACKEND_IMAGE="${CI_REGISTRY_IMAGE}/backend:${CI_COMMIT_SHORT_SHA}"
+    - export ANALYSIS_IMAGE="${CI_REGISTRY_IMAGE}/analysis:${CI_COMMIT_SHORT_SHA}"
+    - export APP_ENV="production"
+    - ansible-playbook
+        -i infra/ansible/inventories/prod.yml
+        -u ansible
+        infra/ansible/playbooks/deploy_stack.yml

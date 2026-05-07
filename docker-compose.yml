@@ -5,6 +5,8 @@ services:
     container_name: typing_frontend
     ports:
       - "3000:3000"
+    environment:
+      APP_ENV: development
     depends_on:
       - backend
     networks:

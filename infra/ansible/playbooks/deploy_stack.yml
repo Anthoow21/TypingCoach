@@ -1,0 +1,145 @@
+---
+- name: Deploy TypingCoach stack
+  hosts: all
+  become: true
+
+  vars:
+    app_dir: /opt/typingcoach
+    registry_url: "dvp-srv-gitlab.campus12avenue.fr:5050"
+    frontend_image: "{{ lookup('env', 'FRONTEND_IMAGE') }}"
+    backend_image:  "{{ lookup('env', 'BACKEND_IMAGE') }}"
+    analysis_image: "{{ lookup('env', 'ANALYSIS_IMAGE') }}"
+    db_password:    "{{ lookup('env', 'DB_PASSWORD') }}"
+    registry_token: "{{ lookup('env', 'REGISTRY_API_TOKEN') }}"
+    app_env:        "{{ lookup('env', 'APP_ENV') | default('production', true) }}"
+
+  tasks:
+
+    # ── 1. Docker ──────────────────────────────────────────────────
+
+    - name: Check if Docker is already installed
+      command: docker --version
+      register: docker_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Install Docker and Docker Compose plugin
+      apt:
+        name:
+          - docker.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+      when: docker_check.rc != 0
+
+    - name: Ensure Docker is started and enabled
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    # ── 2. DNS ─────────────────────────────────────────────────────
+
+    - name: Configure /etc/resolv.conf
+      copy:
+        dest: /etc/resolv.conf
+        mode: '0644'
+        content: |
+          nameserver {{ dns_server }}
+          nameserver 1.1.1.1
+          search {{ dns_search }}
+
+    - name: Configure Docker daemon DNS
+      copy:
+        dest: /etc/docker/daemon.json
+        mode: '0644'
+        content: |
+          {
+            "dns": ["{{ dns_server }}", "1.1.1.1"],
+            "dns-search": ["{{ dns_search }}"]
+          }
+      notify: Restart Docker
+
+    # ── 3. Certificat registry GitLab ──────────────────────────────
+
+    - name: Create Docker certs directory for registry
+      file:
+        path: "/etc/docker/certs.d/{{ registry_url }}"
+        state: directory
+        mode: '0755'
+
+    - name: Retrieve self-signed certificate from GitLab registry
+      shell: >
+        openssl s_client -connect {{ registry_url }} -showcerts </dev/null 2>/dev/null |
+        openssl x509 -outform PEM
+        > /etc/docker/certs.d/{{ registry_url }}/ca.crt
+      args:
+        creates: "/etc/docker/certs.d/{{ registry_url }}/ca.crt"
+
+    # ── 4. Authentification registry ───────────────────────────────
+
+    - name: Login to GitLab container registry
+      community.docker.docker_login:
+        registry_url: "{{ registry_url }}"
+        username: oauth2
+        password: "{{ registry_token }}"
+        reauthorize: true
+
+    # ── 5. Répertoire applicatif ───────────────────────────────────
+
+    - name: Create application directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: '0755'
+
+    # ── 6. Fichier docker-compose ──────────────────────────────────
+
+    - name: Copy docker-compose.deploy.yml
+      copy:
+        src: "{{ playbook_dir }}/../../docker/docker-compose.deploy.yml"
+        dest: "{{ app_dir }}/docker-compose.yml"
+        mode: '0644'
+
+    # ── 7. Fichier .env (secrets + tags d'images) ──────────────────
+
+    - name: Write .env file
+      copy:
+        dest: "{{ app_dir }}/.env"
+        mode: '0600'
+        content: |
+          FRONTEND_IMAGE={{ frontend_image }}
+          BACKEND_IMAGE={{ backend_image }}
+          ANALYSIS_IMAGE={{ analysis_image }}
+          DB_PASSWORD={{ db_password }}
+          APP_ENV={{ app_env }}
+
+    # ── 8. Pull + démarrage du stack ──────────────────────────────
+
+    - name: Pull latest images and start TypingCoach stack
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_dir }}"
+        pull: always
+        state: present
+      environment:
+        FRONTEND_IMAGE: "{{ frontend_image }}"
+        BACKEND_IMAGE:  "{{ backend_image }}"
+        ANALYSIS_IMAGE: "{{ analysis_image }}"
+        DB_PASSWORD:    "{{ db_password }}"
+
+    # ── 9. Vérification ────────────────────────────────────────────
+
+    - name: Wait for frontend to be reachable
+      uri:
+        url: "http://localhost:3000"
+        status_code: 200
+      register: health
+      retries: 10
+      delay: 5
+      until: health.status == 200
+
+  handlers:
+    - name: Restart Docker
+      service:
+        name: docker
+        state: restarted

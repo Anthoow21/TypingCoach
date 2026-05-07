@@ -19,7 +19,8 @@ variables:
   stage: build
   image: docker:24
   services:
-    - docker:24-dind
+    - name: docker:24-dind
+      command: ["--insecure-registry=dvp-srv-gitlab.campus12avenue.fr:5050"]
   tags:
     - docker
   before_script:

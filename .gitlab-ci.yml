@@ -6,7 +6,8 @@ stages:
 
 variables:
   DOCKER_DRIVER: overlay2
-  DOCKER_TLS_CERTDIR: "/certs"
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_HOST: tcp://docker:2375
   ANSIBLE_IMAGE: dvp-srv-gitlab.campus12avenue.fr:5050/root/tp1:latest
   DEV_HOST: "172.16.20.36"
   PROD_HOST: "172.16.20.35"
@@ -20,10 +21,18 @@ variables:
   image: docker:24
   services:
     - name: docker:24-dind
-      command: ["--insecure-registry=dvp-srv-gitlab.campus12avenue.fr:5050"]
+      command:
+        - "--tls=false"
+        - "--insecure-registry=dvp-srv-gitlab.campus12avenue.fr:5050"
   tags:
     - docker
   before_script:
+    - |
+      mkdir -p /etc/docker/certs.d/dvp-srv-gitlab.campus12avenue.fr:5050
+      openssl s_client -connect dvp-srv-gitlab.campus12avenue.fr:5050 \
+        -showcerts </dev/null 2>/dev/null \
+        | openssl x509 -outform PEM \
+        > /etc/docker/certs.d/dvp-srv-gitlab.campus12avenue.fr:5050/ca.crt
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
 
 .ansible_base:

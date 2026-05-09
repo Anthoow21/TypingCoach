@@ -130,19 +130,33 @@ function renderReferenceText() {
 
   const progress = currentProgressIndex();
   const locked = state.lockedErrorIndex;
-  const html = chars.map((char, index) => {
-    let cls = "char pending";
-    if (index < progress) {
-      cls = "char correct";
+
+  const tokens = [];
+  let currentWord = [];
+  chars.forEach((char, index) => {
+    if (char === " ") {
+      if (currentWord.length) { tokens.push({ type: "word", chars: currentWord }); currentWord = []; }
+      tokens.push({ type: "space", chars: [{ char: " ", index }] });
+    } else {
+      currentWord.push({ char, index });
     }
-    if (locked !== null && index === locked) {
-      cls = "char error";
-    } else if (index === progress && locked === null) {
-      cls = "char current";
-    }
-    const safeChar = char === " " ? "&nbsp;" : escapeHtml(char);
-    const extraClass = char === " " ? " space" : "";
-    return `<span class="${cls}${extraClass}">${safeChar}</span>`;
+  });
+  if (currentWord.length) tokens.push({ type: "word", chars: currentWord });
+
+  const html = tokens.map((token) => {
+    const charsHtml = token.chars.map(({ char, index }) => {
+      let cls = "char pending";
+      if (index < progress) cls = "char correct";
+      if (locked !== null && index === locked) cls = "char error";
+      else if (index === progress && locked === null) cls = "char current";
+      const safeChar = char === " " ? "&nbsp;" : escapeHtml(char);
+      const extraClass = char === " " ? " space" : "";
+      return `<span class="${cls}${extraClass}">${safeChar}</span>`;
+    }).join("");
+
+    return token.type === "space"
+      ? `<span class="word space-word">${charsHtml}</span>`
+      : `<span class="word">${charsHtml}</span>`;
   }).join("");
 
   els.referenceText.innerHTML = html;

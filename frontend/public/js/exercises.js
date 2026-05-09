@@ -4,8 +4,10 @@ import { initTheme } from "./ui.js";
 const els = {
   tabText: document.getElementById("tab-text"),
   tabWordList: document.getElementById("tab-word-list"),
+  tabImport: document.getElementById("tab-import"),
   textForm: document.getElementById("text-form"),
   wordListForm: document.getElementById("word-list-form"),
+  importForm: document.getElementById("import-form"),
   textExerciseTitle: document.getElementById("text-exercise-title"),
   textExerciseContent: document.getElementById("text-exercise-content"),
   textExerciseLanguage: document.getElementById("text-exercise-language"),
@@ -16,14 +18,19 @@ const els = {
   wordListLanguage: document.getElementById("word-list-language"),
   wordListDifficulty: document.getElementById("word-list-difficulty"),
   createWordListExerciseBtn: document.getElementById("create-word-list-exercise-btn"),
+  importFileInput: document.getElementById("import-file-input"),
+  importExercisesBtn: document.getElementById("import-exercises-btn"),
+  importProgress: document.getElementById("import-progress"),
   feedback: document.getElementById("exercise-feedback"),
 };
 
 function setExerciseMode(mode) {
   els.tabText.classList.toggle("active", mode === "text");
   els.tabWordList.classList.toggle("active", mode === "word_list");
+  els.tabImport.classList.toggle("active", mode === "import");
   els.textForm.classList.toggle("hidden", mode !== "text");
   els.wordListForm.classList.toggle("hidden", mode !== "word_list");
+  els.importForm.classList.toggle("hidden", mode !== "import");
 }
 
 function setFeedback(message, isError = false) {
@@ -103,11 +110,63 @@ async function createWordListExercise() {
   }
 }
 
+async function importExercises() {
+  const file = els.importFileInput.files[0];
+  if (!file) {
+    setFeedback("Sélectionne un fichier JSON.", true);
+    return;
+  }
+
+  let exercises;
+  try {
+    const text = await file.text();
+    exercises = JSON.parse(text);
+  } catch {
+    setFeedback("Fichier JSON invalide.", true);
+    return;
+  }
+
+  if (!Array.isArray(exercises) || exercises.length === 0) {
+    setFeedback("Le fichier doit contenir un tableau d'exercices non vide.", true);
+    return;
+  }
+
+  els.importProgress.classList.remove("hidden");
+  els.importExercisesBtn.disabled = true;
+
+  let imported = 0;
+  let failed = 0;
+
+  for (const exercise of exercises) {
+    try {
+      await fetchJson(`${API_BASE_URL}/exercises`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(exercise),
+      });
+      imported += 1;
+    } catch {
+      failed += 1;
+    }
+    els.importProgress.textContent = `Importé ${imported} / ${exercises.length}${failed > 0 ? ` (${failed} erreur(s))` : ""}`;
+  }
+
+  els.importExercisesBtn.disabled = false;
+  setFeedback(
+    failed === 0
+      ? `Import terminé : ${imported} exercice(s) créé(s).`
+      : `Import terminé : ${imported} créé(s), ${failed} échoué(s).`,
+    failed > 0,
+  );
+}
+
 function bindEvents() {
   els.tabText.addEventListener("click", () => setExerciseMode("text"));
   els.tabWordList.addEventListener("click", () => setExerciseMode("word_list"));
+  els.tabImport.addEventListener("click", () => setExerciseMode("import"));
   els.createTextExerciseBtn.addEventListener("click", createTextExercise);
   els.createWordListExerciseBtn.addEventListener("click", createWordListExercise);
+  els.importExercisesBtn.addEventListener("click", importExercises);
 }
 
 function init() {

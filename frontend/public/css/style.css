@@ -117,11 +117,13 @@ textarea {
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   padding: 22px;
   position: relative;
   overflow: hidden;
+  contain: layout style;
+  transform: translateZ(0);
 }
 
 .panel::before {
@@ -254,6 +256,7 @@ textarea:focus {
   padding: 0 18px;
   border: 1px solid var(--line);
   transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+  will-change: transform;
 }
 
 .primary-button {
@@ -710,6 +713,7 @@ textarea:focus {
   font-weight: 500;
   letter-spacing: -0.01em;
   transition: color 0.18s ease, transform 0.18s ease;
+  will-change: transform;
 }
 
 .main-nav-link:hover {

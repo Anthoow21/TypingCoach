@@ -17,11 +17,8 @@
 
     # ── 1. Docker ──────────────────────────────────────────────────
 
-    - name: Check if Docker is already installed
-      command: docker --version
-      register: docker_check
-      ignore_errors: true
-      changed_when: false
+    - name: Check if Docker is installed
+      package_facts:
 
     - name: Install prerequisites for Docker repo
       apt:
@@ -31,7 +28,7 @@
           - gnupg
         state: present
         update_cache: true
-      when: docker_check.rc != 0
+      when: "'docker-ce' not in ansible_facts.packages"
 
     - name: Add Docker GPG key
       shell: |
@@ -40,7 +37,7 @@
         chmod a+r /etc/apt/keyrings/docker.gpg
       args:
         creates: /etc/apt/keyrings/docker.gpg
-      when: docker_check.rc != 0
+      when: "'docker-ce' not in ansible_facts.packages"
 
     - name: Add Docker apt repository
       shell: |
@@ -48,7 +45,7 @@
           > /etc/apt/sources.list.d/docker.list
       args:
         creates: /etc/apt/sources.list.d/docker.list
-      when: docker_check.rc != 0
+      when: "'docker-ce' not in ansible_facts.packages"
 
     - name: Install Docker CE and Docker Compose plugin
       apt:
@@ -60,7 +57,7 @@
           - docker-compose-plugin
         state: present
         update_cache: true
-      when: docker_check.rc != 0
+      when: "'docker-ce' not in ansible_facts.packages"
 
     - name: Ensure Docker is started and enabled
       service:
@@ -79,22 +76,55 @@
           nameserver 1.1.1.1
           search {{ dns_search }}
 
-    - name: Configure Docker daemon DNS and insecure registry
+    - name: Configure Docker daemon DNS
       copy:
         dest: /etc/docker/daemon.json
         mode: '0644'
         content: |
           {
-            "dns": ["{{ dns_server }}", "1.1.1.1"],
-            "dns-search": ["{{ dns_search }}"],
-            "insecure-registries": ["{{ registry_url }}"]
+            "dns": ["{{ dns_server }}"],
+            "dns-search": ["{{ dns_search }}"]
           }
+      notify: Restart Docker
+
+    - name: Flush handlers to restart Docker before cert setup
+      meta: flush_handlers
+
+    # ── 3. SDK Python Docker ───────────────────────────────────────
+
+    - name: Install Python Docker SDK
+      apt:
+        name:
+          - python3-docker
+        state: present
+        update_cache: false
+
+    # ── 4. Certificat registry GitLab ──────────────────────────────
+
+    - name: Ensure Docker certs directory exists for registry
+      file:
+        path: "/etc/docker/certs.d/{{ registry_url }}"
+        state: directory
+        mode: '0755'
+
+    - name: Retrieve self-signed certificate from GitLab registry
+      shell: |
+        echo | openssl s_client -connect {{ registry_url }} -showcerts 2>/dev/null \
+        | openssl x509 -outform PEM
+      register: registry_cert
+      changed_when: false
+
+    - name: Install GitLab registry certificate for Docker
+      copy:
+        dest: "/etc/docker/certs.d/{{ registry_url }}/ca.crt"
+        content: "{{ registry_cert.stdout }}"
+        mode: '0644'
       notify: Restart Docker
 
     - name: Flush handlers to restart Docker before login
       meta: flush_handlers
 
-    # ── 4. Authentification registry ───────────────────────────────
+    # ── 5. Authentification registry ───────────────────────────────
 
     - name: Login to GitLab container registry
       community.docker.docker_login:
@@ -103,7 +133,7 @@
         password: "{{ registry_token }}"
         reauthorize: true
 
-    # ── 5. Répertoire applicatif ───────────────────────────────────
+    # ── 6. Répertoire applicatif ───────────────────────────────────
 
     - name: Create application directory
       file:
@@ -111,7 +141,7 @@
         state: directory
         mode: '0755'
 
-    # ── 6. Fichier docker-compose ──────────────────────────────────
+    # ── 7. Fichier docker-compose ──────────────────────────────────
 
     - name: Copy docker-compose.deploy.yml
       copy:
@@ -119,7 +149,7 @@
         dest: "{{ app_dir }}/docker-compose.yml"
         mode: '0644'
 
-    # ── 7. Fichier .env (secrets + tags d'images) ──────────────────
+    # ── 8. Fichier .env (secrets + tags d'images) ──────────────────
 
     - name: Write .env file
       copy:
@@ -132,7 +162,7 @@
           DB_PASSWORD={{ db_password }}
           APP_ENV={{ app_env }}
 
-    # ── 8. Pull + démarrage du stack ──────────────────────────────
+    # ── 9. Pull + démarrage du stack ──────────────────────────────
 
     - name: Pull latest images and start TypingCoach stack
       community.docker.docker_compose_v2:
@@ -145,7 +175,7 @@
         ANALYSIS_IMAGE: "{{ analysis_image }}"
         DB_PASSWORD:    "{{ db_password }}"
 
-    # ── 9. Vérification ────────────────────────────────────────────
+    # ── 10. Vérification ────────────────────────────────────────────
 
     - name: Wait for frontend to be reachable
       uri:

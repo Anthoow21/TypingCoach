@@ -79,32 +79,20 @@
           nameserver 1.1.1.1
           search {{ dns_search }}
 
-    - name: Configure Docker daemon DNS
+    - name: Configure Docker daemon DNS and insecure registry
       copy:
         dest: /etc/docker/daemon.json
         mode: '0644'
         content: |
           {
             "dns": ["{{ dns_server }}", "1.1.1.1"],
-            "dns-search": ["{{ dns_search }}"]
+            "dns-search": ["{{ dns_search }}"],
+            "insecure-registries": ["{{ registry_url }}"]
           }
       notify: Restart Docker
 
-    # ── 3. Certificat registry GitLab ──────────────────────────────
-
-    - name: Create Docker certs directory for registry
-      file:
-        path: "/etc/docker/certs.d/{{ registry_url }}"
-        state: directory
-        mode: '0755'
-
-    - name: Retrieve self-signed certificate from GitLab registry
-      shell: >
-        openssl s_client -connect {{ registry_url }} -showcerts </dev/null 2>/dev/null |
-        openssl x509 -outform PEM
-        > /etc/docker/certs.d/{{ registry_url }}/ca.crt
-      args:
-        creates: "/etc/docker/certs.d/{{ registry_url }}/ca.crt"
+    - name: Flush handlers to restart Docker before login
+      meta: flush_handlers
 
     # ── 4. Authentification registry ───────────────────────────────
 

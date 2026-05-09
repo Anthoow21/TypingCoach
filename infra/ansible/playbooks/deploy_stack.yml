@@ -1,0 +1,212 @@
+---
+- name: Deploy TypingCoach stack
+  hosts: all
+  become: true
+
+  vars:
+    app_dir: /opt/typingcoach
+    registry_url: "dvp-srv-gitlab.campus12avenue.fr:5050"
+    frontend_image: "{{ lookup('env', 'FRONTEND_IMAGE') }}"
+    backend_image:  "{{ lookup('env', 'BACKEND_IMAGE') }}"
+    analysis_image: "{{ lookup('env', 'ANALYSIS_IMAGE') }}"
+    db_password:    "{{ lookup('env', 'DB_PASSWORD') }}"
+    registry_token: "{{ lookup('env', 'REGISTRY_API_TOKEN') }}"
+    app_env:        "{{ lookup('env', 'APP_ENV') | default('production', true) }}"
+
+  tasks:
+
+    # ── 0. /etc/hosts — bypass DNS pour le registry GitLab ─────────
+    # Le runner CI résout l'IP ; la VM l'a en dur, indépendamment de son DNS.
+
+    - name: Add GitLab registry to /etc/hosts
+      lineinfile:
+        path: /etc/hosts
+        regexp: ".*dvp-srv-gitlab\\.campus12avenue\\.fr$"
+        line: "{{ registry_ip }} dvp-srv-gitlab.campus12avenue.fr"
+
+    # ── 1. Docker ──────────────────────────────────────────────────
+
+    - name: Check if Docker is installed
+      package_facts:
+
+    - name: Install prerequisites for Docker repo
+      apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
+        update_cache: true
+      when: "'docker-ce' not in ansible_facts.packages"
+
+    - name: Add Docker GPG key
+      shell: |
+        install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        chmod a+r /etc/apt/keyrings/docker.gpg
+      args:
+        creates: /etc/apt/keyrings/docker.gpg
+      when: "'docker-ce' not in ansible_facts.packages"
+
+    - name: Add Docker apt repository
+      shell: |
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
+          > /etc/apt/sources.list.d/docker.list
+      args:
+        creates: /etc/apt/sources.list.d/docker.list
+      when: "'docker-ce' not in ansible_facts.packages"
+
+    - name: Install Docker CE and Docker Compose plugin
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+      when: "'docker-ce' not in ansible_facts.packages"
+
+    - name: Ensure Docker is started and enabled
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    # ── 2. DNS ─────────────────────────────────────────────────────
+
+    - name: Configure /etc/resolv.conf
+      copy:
+        dest: /etc/resolv.conf
+        mode: '0644'
+        content: |
+          nameserver {{ dns_server }}
+          nameserver 1.1.1.1
+          search {{ dns_search }}
+
+    - name: Configure Docker daemon DNS
+      copy:
+        dest: /etc/docker/daemon.json
+        mode: '0644'
+        content: |
+          {
+            "dns": ["{{ dns_server }}"],
+            "dns-search": ["{{ dns_search }}"]
+          }
+      notify: Restart Docker
+
+    - name: Flush handlers to restart Docker before cert setup
+      meta: flush_handlers
+
+    # ── 3. SDK Python Docker ───────────────────────────────────────
+
+    - name: Install Python Docker SDK
+      apt:
+        name:
+          - python3-docker
+        state: present
+        update_cache: false
+
+    # ── 4. Certificat registry GitLab ──────────────────────────────
+
+    - name: Ensure Docker certs directory exists for registry
+      file:
+        path: "/etc/docker/certs.d/{{ registry_url }}"
+        state: directory
+        mode: '0755'
+
+    - name: Retrieve self-signed certificate from GitLab registry
+      shell: |
+        echo | openssl s_client -connect {{ registry_url }} -showcerts 2>/dev/null \
+        | openssl x509 -outform PEM
+      register: registry_cert
+      changed_when: false
+
+    - name: Install GitLab registry certificate for Docker (certs.d)
+      copy:
+        dest: "/etc/docker/certs.d/{{ registry_url }}/ca.crt"
+        content: "{{ registry_cert.stdout }}"
+        mode: '0644'
+
+    - name: Install GitLab certificate in system CA store
+      copy:
+        dest: /usr/local/share/ca-certificates/gitlab-registry.crt
+        content: "{{ registry_cert.stdout }}"
+        mode: '0644'
+
+    - name: Update system CA certificates
+      command: update-ca-certificates
+      changed_when: true
+      notify: Restart Docker
+
+    - name: Flush handlers to restart Docker before login
+      meta: flush_handlers
+
+    # ── 5. Authentification registry ───────────────────────────────
+
+    - name: Login to GitLab container registry
+      community.docker.docker_login:
+        registry_url: "{{ registry_url }}"
+        username: oauth2
+        password: "{{ registry_token }}"
+        reauthorize: true
+
+    # ── 6. Répertoire applicatif ───────────────────────────────────
+
+    - name: Create application directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: '0755'
+
+    # ── 7. Fichier docker-compose ──────────────────────────────────
+
+    - name: Copy docker-compose.deploy.yml
+      copy:
+        src: "{{ playbook_dir }}/../../docker/docker-compose.deploy.yml"
+        dest: "{{ app_dir }}/docker-compose.yml"
+        mode: '0644'
+
+    # ── 8. Fichier .env (secrets + tags d'images) ──────────────────
+
+    - name: Write .env file
+      copy:
+        dest: "{{ app_dir }}/.env"
+        mode: '0600'
+        content: |
+          FRONTEND_IMAGE={{ frontend_image }}
+          BACKEND_IMAGE={{ backend_image }}
+          ANALYSIS_IMAGE={{ analysis_image }}
+          DB_PASSWORD={{ db_password }}
+          APP_ENV={{ app_env }}
+
+    # ── 9. Pull + démarrage du stack ──────────────────────────────
+
+    - name: Pull latest images and start TypingCoach stack
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_dir }}"
+        pull: always
+        state: present
+      environment:
+        FRONTEND_IMAGE: "{{ frontend_image }}"
+        BACKEND_IMAGE:  "{{ backend_image }}"
+        ANALYSIS_IMAGE: "{{ analysis_image }}"
+        DB_PASSWORD:    "{{ db_password }}"
+
+    # ── 10. Vérification ────────────────────────────────────────────
+
+    - name: Wait for frontend to be reachable
+      uri:
+        url: "http://localhost:3000"
+        status_code: 200
+      register: health
+      retries: 10
+      delay: 5
+      until: health.status == 200
+
+  handlers:
+    - name: Restart Docker
+      service:
+        name: docker
+        state: restarted

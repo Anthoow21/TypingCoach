@@ -123,11 +123,21 @@
       register: registry_cert
       changed_when: false
 
-    - name: Install GitLab registry certificate for Docker
+    - name: Install GitLab registry certificate for Docker (certs.d)
       copy:
         dest: "/etc/docker/certs.d/{{ registry_url }}/ca.crt"
         content: "{{ registry_cert.stdout }}"
         mode: '0644'
+
+    - name: Install GitLab certificate in system CA store
+      copy:
+        dest: /usr/local/share/ca-certificates/gitlab-registry.crt
+        content: "{{ registry_cert.stdout }}"
+        mode: '0644'
+
+    - name: Update system CA certificates
+      command: update-ca-certificates
+      changed_when: true
       notify: Restart Docker
 
     - name: Flush handlers to restart Docker before login

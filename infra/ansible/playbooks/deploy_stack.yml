@@ -15,6 +15,15 @@
 
   tasks:
 
+    # ── 0. /etc/hosts — bypass DNS pour le registry GitLab ─────────
+    # Le runner CI résout l'IP ; la VM l'a en dur, indépendamment de son DNS.
+
+    - name: Add GitLab registry to /etc/hosts
+      lineinfile:
+        path: /etc/hosts
+        regexp: ".*dvp-srv-gitlab\\.campus12avenue\\.fr$"
+        line: "{{ registry_ip }} dvp-srv-gitlab.campus12avenue.fr"
+
     # ── 1. Docker ──────────────────────────────────────────────────
 
     - name: Check if Docker is installed

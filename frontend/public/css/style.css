@@ -1,8 +1,8 @@
 :root {
   --bg: #f3f1ec;
-  --bg-elevated: rgba(255, 255, 255, 0.72);
-  --panel: rgba(255, 255, 255, 0.78);
-  --panel-strong: rgba(255, 255, 255, 0.92);
+  --bg-elevated: #f8f6f1;
+  --panel: #faf8f4;
+  --panel-strong: #ffffff;
   --text: #151515;
   --muted: #67645f;
   --line: rgba(21, 21, 21, 0.09);
@@ -21,9 +21,9 @@
 
 body[data-theme="dark"] {
   --bg: #0f1113;
-  --bg-elevated: rgba(22, 24, 27, 0.72);
-  --panel: rgba(19, 22, 25, 0.86);
-  --panel-strong: rgba(23, 26, 30, 0.96);
+  --bg-elevated: #16181b;
+  --panel: #13161a;
+  --panel-strong: #171a1e;
   --text: #f2efe8;
   --muted: #9e9a93;
   --line: rgba(255, 255, 255, 0.09);
@@ -117,8 +117,6 @@ textarea {
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
   padding: 22px;
   position: relative;
   overflow: hidden;

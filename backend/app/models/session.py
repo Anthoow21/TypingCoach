@@ -8,8 +8,8 @@ class TypingSession(Base):
     __tablename__ = "typing_sessions"
 
     id = Column(Integer, primary_key=True, index=True)
-    exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False)
-    practice_series_id = Column(Integer, ForeignKey("practice_series.id"), nullable=True)
+    exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False, index=True)
+    practice_series_id = Column(Integer, ForeignKey("practice_series.id"), nullable=True, index=True)
     user_name = Column(String(100), nullable=True)
     status = Column(String(20), nullable=False, default="started")
     reference_text = Column(Text, nullable=False)

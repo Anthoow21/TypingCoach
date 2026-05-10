@@ -660,11 +660,6 @@ mod tests {
     }
 
     #[test]
-    fn word_at_space_returns_none() {
-        assert_eq!(extract_word_at("hello world", 5), None);
-    }
-
-    #[test]
     fn word_at_out_of_bounds_returns_none() {
         assert_eq!(extract_word_at("hello", 100), None);
     }

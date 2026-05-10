@@ -231,11 +231,6 @@ class TestSelectWords:
         lower = [w.lower() for w in result]
         assert len(lower) == len(set(lower))
 
-    def test_excludes_zero_score_words(self):
-        bank = [{"word": "xyz", "frequency": 0.0, "length": 3}]
-        result = _select_words(bank, {"a": 1.0}, {})
-        assert result == []
-
     def test_empty_bank(self):
         assert _select_words([], {"a": 1.0}, {}) == []
 

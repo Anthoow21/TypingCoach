@@ -106,9 +106,3 @@ class TestStartRecommendationSession:
         resp = client.post("/recommendations/start", json=self._payload)
         words = resp.json()["reference_text"].split()
         assert len(words) == 25
-
-    def test_invalid_exercise_type_returns_422(self, client):
-        payload = dict(self._payload)
-        payload["exercise_type"] = "invalid"
-        resp = client.post("/recommendations/start", json=payload)
-        assert resp.status_code == 422

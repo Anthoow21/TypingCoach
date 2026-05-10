@@ -96,6 +96,10 @@ app.get("*", (req, res) => {
   res.sendFile(indexPath);
 });
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Frontend lancé sur http://0.0.0.0:${PORT} [${IS_DEV ? "DEV" : "PROD"}]`);
-});
+if (require.main === module) {
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Frontend lancé sur http://0.0.0.0:${PORT} [${IS_DEV ? "DEV" : "PROD"}]`);
+  });
+}
+
+module.exports = { app, serveHtml, PORT, IS_DEV };

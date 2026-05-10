@@ -504,6 +504,429 @@ async fn analyze(Json(payload): Json<AnalyzeRequest>) -> Json<AnalyzeResponse> {
     Json(response)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── compute_wpm ───────────────────────────────────────────────────────────
+
+    #[test]
+    fn wpm_standard() {
+        // 30 chars = 6 "words" over 60s → 6 WPM
+        let wpm = compute_wpm("123456789012345678901234567890", 60.0);
+        assert!((wpm - 6.0).abs() < 0.1, "wpm={wpm}");
+    }
+
+    #[test]
+    fn wpm_zero_duration() {
+        assert_eq!(compute_wpm("hello", 0.0), 0.0);
+    }
+
+    #[test]
+    fn wpm_negative_duration() {
+        assert_eq!(compute_wpm("hello", -1.0), 0.0);
+    }
+
+    #[test]
+    fn wpm_empty_text() {
+        assert_eq!(compute_wpm("", 60.0), 0.0);
+    }
+
+    // ── compute_accuracy ──────────────────────────────────────────────────────
+
+    #[test]
+    fn accuracy_perfect() {
+        let acc = compute_accuracy("hello", 0);
+        assert!((acc - 100.0).abs() < 0.01, "acc={acc}");
+    }
+
+    #[test]
+    fn accuracy_all_errors() {
+        let acc = compute_accuracy("hello", 5);
+        assert!((acc - 0.0).abs() < 0.01, "acc={acc}");
+    }
+
+    #[test]
+    fn accuracy_clamped_at_zero() {
+        let acc = compute_accuracy("hi", 100);
+        assert_eq!(acc, 0.0);
+    }
+
+    #[test]
+    fn accuracy_partial() {
+        // 10 chars, 2 errors → 80%
+        let acc = compute_accuracy("1234567890", 2);
+        assert!((acc - 80.0).abs() < 0.01, "acc={acc}");
+    }
+
+    #[test]
+    fn accuracy_empty_reference_no_crash() {
+        let acc = compute_accuracy("", 0);
+        assert!((acc - 100.0).abs() < 0.01);
+    }
+
+    // ── compute_mean ──────────────────────────────────────────────────────────
+
+    #[test]
+    fn mean_empty() {
+        assert_eq!(compute_mean(&[]), 0.0);
+    }
+
+    #[test]
+    fn mean_single_value() {
+        assert!((compute_mean(&[42.0]) - 42.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn mean_multiple_values() {
+        assert!((compute_mean(&[10.0, 20.0, 30.0]) - 20.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn mean_rounded_to_two_decimals() {
+        let m = compute_mean(&[1.0, 2.0, 3.0]);
+        assert_eq!(m, 2.0);
+    }
+
+    // ── compute_median ────────────────────────────────────────────────────────
+
+    #[test]
+    fn median_empty() {
+        assert_eq!(compute_median(&[]), 0.0);
+    }
+
+    #[test]
+    fn median_odd_count() {
+        assert!((compute_median(&[1.0, 3.0, 5.0]) - 3.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn median_even_count() {
+        assert!((compute_median(&[1.0, 2.0, 3.0, 4.0]) - 2.5).abs() < 0.01);
+    }
+
+    #[test]
+    fn median_unsorted_input() {
+        assert!((compute_median(&[5.0, 1.0, 3.0]) - 3.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn median_single_value() {
+        assert!((compute_median(&[7.0]) - 7.0).abs() < 0.01);
+    }
+
+    // ── compute_percentile ────────────────────────────────────────────────────
+
+    #[test]
+    fn percentile_empty() {
+        assert_eq!(compute_percentile(&[], 0.95), 0.0);
+    }
+
+    #[test]
+    fn percentile_single_value() {
+        assert!((compute_percentile(&[42.0], 0.95) - 42.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn percentile_p95_takes_high_value() {
+        let values: Vec<f64> = (1..=20).map(|x| x as f64).collect();
+        let p95 = compute_percentile(&values, 0.95);
+        assert!(p95 >= 19.0, "p95={p95}");
+    }
+
+    #[test]
+    fn percentile_p50_equals_median() {
+        let values = vec![10.0, 20.0, 30.0, 40.0, 50.0];
+        let p50 = compute_percentile(&values, 0.5);
+        let med = compute_median(&values);
+        assert!((p50 - med).abs() < 0.01, "p50={p50} median={med}");
+    }
+
+    // ── extract_word_at ───────────────────────────────────────────────────────
+
+    #[test]
+    fn word_at_middle() {
+        assert_eq!(extract_word_at("hello world foo", 7), Some("world".to_string()));
+    }
+
+    #[test]
+    fn word_at_start() {
+        assert_eq!(extract_word_at("hello world", 0), Some("hello".to_string()));
+    }
+
+    #[test]
+    fn word_at_last_char_of_word() {
+        assert_eq!(extract_word_at("hello world", 4), Some("hello".to_string()));
+    }
+
+    #[test]
+    fn word_at_space_returns_none() {
+        assert_eq!(extract_word_at("hello world", 5), None);
+    }
+
+    #[test]
+    fn word_at_out_of_bounds_returns_none() {
+        assert_eq!(extract_word_at("hello", 100), None);
+    }
+
+    #[test]
+    fn word_at_empty_returns_none() {
+        assert_eq!(extract_word_at("", 0), None);
+    }
+
+    // ── extract_sequences_at ──────────────────────────────────────────────────
+
+    #[test]
+    fn sequences_at_basic_bigrams() {
+        let seqs = extract_sequences_at("abcde", 2);
+        assert!(seqs.iter().any(|s| s.len() == 2), "{seqs:?}");
+    }
+
+    #[test]
+    fn sequences_at_no_whitespace_crossing() {
+        let seqs = extract_sequences_at("hello world", 5);
+        for seq in &seqs {
+            assert!(!seq.contains(' '), "whitespace in sequence: {seq}");
+        }
+    }
+
+    #[test]
+    fn sequences_at_empty_text() {
+        assert!(extract_sequences_at("", 0).is_empty());
+    }
+
+    #[test]
+    fn sequences_at_single_char_empty() {
+        assert!(extract_sequences_at("a", 0).is_empty());
+    }
+
+    // ── mistakes_by_character ─────────────────────────────────────────────────
+
+    #[test]
+    fn mistakes_counts_correctly() {
+        let events = vec![
+            ErrorEvent { index: 0, expected_char: "a".to_string(), typed_char: "b".to_string() },
+            ErrorEvent { index: 1, expected_char: "a".to_string(), typed_char: "c".to_string() },
+            ErrorEvent { index: 2, expected_char: "e".to_string(), typed_char: "r".to_string() },
+        ];
+        let counts = mistakes_by_character(&events);
+        assert_eq!(*counts.get("a").unwrap(), 2);
+        assert_eq!(*counts.get("e").unwrap(), 1);
+    }
+
+    #[test]
+    fn mistakes_ignores_whitespace_expected() {
+        let events = vec![
+            ErrorEvent { index: 0, expected_char: " ".to_string(), typed_char: "x".to_string() },
+        ];
+        assert!(mistakes_by_character(&events).is_empty());
+    }
+
+    #[test]
+    fn mistakes_empty_events() {
+        assert!(mistakes_by_character(&[]).is_empty());
+    }
+
+    // ── weak_words ────────────────────────────────────────────────────────────
+
+    #[test]
+    fn weak_words_groups_by_word() {
+        let events = vec![
+            ErrorEvent { index: 0, expected_char: "h".to_string(), typed_char: "j".to_string() },
+            ErrorEvent { index: 1, expected_char: "e".to_string(), typed_char: "r".to_string() },
+        ];
+        let counts = weak_words("hello world", &events);
+        assert_eq!(*counts.get("hello").unwrap(), 2);
+    }
+
+    #[test]
+    fn weak_words_empty_events() {
+        assert!(weak_words("hello", &[]).is_empty());
+    }
+
+    #[test]
+    fn weak_words_different_words() {
+        let events = vec![
+            ErrorEvent { index: 0, expected_char: "h".to_string(), typed_char: "x".to_string() },
+            ErrorEvent { index: 6, expected_char: "w".to_string(), typed_char: "x".to_string() },
+        ];
+        let counts = weak_words("hello world", &events);
+        assert!(counts.contains_key("hello"));
+        assert!(counts.contains_key("world"));
+    }
+
+    // ── weak_sequences ────────────────────────────────────────────────────────
+
+    #[test]
+    fn weak_sequences_generates_ngrams() {
+        let events = vec![
+            ErrorEvent { index: 1, expected_char: "e".to_string(), typed_char: "r".to_string() },
+        ];
+        let counts = weak_sequences("hello world", &events);
+        assert!(!counts.is_empty(), "expected at least one sequence");
+    }
+
+    #[test]
+    fn weak_sequences_empty_events() {
+        assert!(weak_sequences("hello", &[]).is_empty());
+    }
+
+    // ── normalize_key_label ───────────────────────────────────────────────────
+
+    #[test]
+    fn normalize_lowercase_to_uppercase() {
+        assert_eq!(normalize_key_label("a"), Some("A".to_string()));
+    }
+
+    #[test]
+    fn normalize_space_to_space_label() {
+        assert_eq!(normalize_key_label(" "), Some("Space".to_string()));
+    }
+
+    #[test]
+    fn normalize_empty_returns_none() {
+        assert_eq!(normalize_key_label(""), None);
+    }
+
+    #[test]
+    fn normalize_already_uppercase() {
+        assert_eq!(normalize_key_label("Z"), Some("Z".to_string()));
+    }
+
+    // ── round_2 ───────────────────────────────────────────────────────────────
+
+    #[test]
+    fn round_2_rounds_correctly() {
+        assert!((round_2(3.14159) - 3.14).abs() < 0.001);
+        assert!((round_2(2.555) - 2.56).abs() < 0.001);
+        assert!((round_2(1.0) - 1.0).abs() < 0.001);
+    }
+
+    // ── compute_latency_analysis ──────────────────────────────────────────────
+
+    fn make_key_event(key: &str, expected: Option<&str>, ts: i64, is_error: bool, event_type: &str) -> KeyEvent {
+        KeyEvent {
+            key: key.to_string(),
+            expected_char: expected.map(|s| s.to_string()),
+            position: 0,
+            timestamp_ms: ts,
+            event_type: event_type.to_string(),
+            is_error,
+            is_correction: false,
+        }
+    }
+
+    #[test]
+    fn latency_empty_events() {
+        let result = compute_latency_analysis(&[]);
+        assert_eq!(result.mean_ms, 0.0);
+        assert_eq!(result.backspace_count, 0);
+        assert!(result.key_heatmap.is_empty());
+    }
+
+    #[test]
+    fn latency_counts_backspaces() {
+        let events = vec![
+            make_key_event("Backspace", None, 100, false, "backspace"),
+            make_key_event("Backspace", None, 200, false, "backspace"),
+        ];
+        let result = compute_latency_analysis(&events);
+        assert_eq!(result.backspace_count, 2);
+    }
+
+    #[test]
+    fn latency_computes_mean_interval() {
+        let events = vec![
+            make_key_event("a", Some("a"), 0, false, "keydown"),
+            make_key_event("b", Some("b"), 100, false, "keydown"),
+            make_key_event("c", Some("c"), 300, false, "keydown"),
+        ];
+        let result = compute_latency_analysis(&events);
+        // intervals: 100ms and 200ms → mean = 150ms
+        assert!((result.mean_ms - 150.0).abs() < 0.01, "mean={}", result.mean_ms);
+    }
+
+    #[test]
+    fn latency_error_events_skipped_in_intervals() {
+        let events = vec![
+            make_key_event("a", Some("a"), 0, false, "keydown"),
+            make_key_event("x", Some("b"), 100, true, "keydown"),  // error → skipped
+            make_key_event("c", Some("c"), 300, false, "keydown"),
+        ];
+        let result = compute_latency_analysis(&events);
+        // Only two non-error events with one interval (300-100=200ms)
+        assert!(result.mean_ms > 0.0);
+    }
+
+    #[test]
+    fn latency_space_clears_committed_run() {
+        let events = vec![
+            make_key_event("a", Some("a"), 0, false, "keydown"),
+            make_key_event(" ", Some(" "), 100, false, "keydown"),
+            make_key_event("b", Some("b"), 200, false, "keydown"),
+        ];
+        // Should not panic and produce valid analysis
+        let result = compute_latency_analysis(&events);
+        assert!(result.mean_ms >= 0.0);
+    }
+
+    #[test]
+    fn latency_builds_character_stats() {
+        let events = vec![
+            make_key_event("a", Some("a"), 0, false, "keydown"),
+            make_key_event("b", Some("b"), 150, false, "keydown"),
+        ];
+        let result = compute_latency_analysis(&events);
+        assert!(!result.latency_character_stats.is_empty());
+    }
+
+    // ── suggested_focus ───────────────────────────────────────────────────────
+
+    #[test]
+    fn focus_empty_inputs_returns_default() {
+        let focus = suggested_focus(&HashMap::new(), &HashMap::new(), &HashMap::new(), &[], &[]);
+        assert_eq!(focus.len(), 1);
+        assert!(focus[0].contains("Continuer"), "{:?}", focus[0]);
+    }
+
+    #[test]
+    fn focus_with_mistakes_mentions_character() {
+        let mut mistakes = HashMap::new();
+        mistakes.insert("a".to_string(), 3);
+        let focus = suggested_focus(&mistakes, &HashMap::new(), &HashMap::new(), &[], &[]);
+        assert!(focus.iter().any(|s| s.contains("'a'")), "{focus:?}");
+    }
+
+    #[test]
+    fn focus_with_weak_word_mentions_word() {
+        let mut words = HashMap::new();
+        words.insert("bonjour".to_string(), 2);
+        let focus = suggested_focus(&HashMap::new(), &words, &HashMap::new(), &[], &[]);
+        assert!(focus.iter().any(|s| s.contains("bonjour")), "{focus:?}");
+    }
+
+    #[test]
+    fn focus_capped_at_five_items() {
+        let mut mistakes = HashMap::new();
+        mistakes.insert("a".to_string(), 5);
+        let mut words = HashMap::new();
+        words.insert("hello".to_string(), 3);
+        let mut seqs = HashMap::new();
+        seqs.insert("he".to_string(), 2);
+        let slow_chars = vec![("b".to_string(), 200.0)];
+        let slow_seqs = vec![("bc".to_string(), 250.0)];
+        let focus = suggested_focus(&mistakes, &words, &seqs, &slow_chars, &slow_seqs);
+        assert!(focus.len() <= 5, "len={}", focus.len());
+    }
+
+    #[test]
+    fn focus_slow_char_mentions_latency() {
+        let slow_chars = vec![("z".to_string(), 300.0)];
+        let focus = suggested_focus(&HashMap::new(), &HashMap::new(), &HashMap::new(), &slow_chars, &[]);
+        assert!(focus.iter().any(|s| s.contains("'z'")), "{focus:?}");
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let app = Router::new()

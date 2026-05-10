@@ -221,8 +221,10 @@ function closeSessionModal() {
 
 async function showSessionDetail(sessionId) {
   try {
-    const results = await fetchJson(`${API_BASE_URL}/results/session/${sessionId}`);
-    const analysis = await fetchJson(`${API_BASE_URL}/analyses/session/${sessionId}`);
+    const [results, analysis] = await Promise.all([
+      fetchJson(`${API_BASE_URL}/results/session/${sessionId}`),
+      fetchJson(`${API_BASE_URL}/analyses/session/${sessionId}`),
+    ]);
     const payload = analysis.analysis_payload || {};
 
     els.modalSessionTitle.textContent = `Session #${sessionId}`;
@@ -245,9 +247,13 @@ function bindEvents() {
   els.filterSessionsBtn.addEventListener("click", () => setFilter("sessions"));
   els.filterSeriesBtn.addEventListener("click", () => setFilter("series"));
   els.filterAdaptiveBtn.addEventListener("click", () => setFilter("adaptive"));
+  let searchDebounce = null;
   els.searchInput.addEventListener("input", () => {
-    state.page = 1;
-    renderHistoryPage();
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+      state.page = 1;
+      renderHistoryPage();
+    }, 300);
   });
   els.refreshBtn.addEventListener("click", loadResultsHistory);
   els.historyPrevBtn.addEventListener("click", () => {

@@ -29,16 +29,14 @@ def build_result_response(result: TypingResult, session: TypingSession, exercise
 
 @router.get("", response_model=list[ResultResponse])
 def list_results(db: Session = Depends(get_db)):
-    results = db.query(TypingResult).order_by(TypingResult.id.asc()).all()
-    output = []
-
-    for result in results:
-        session = db.query(TypingSession).filter(TypingSession.id == result.session_id).first()
-        if session:
-            exercise = db.query(Exercise).filter(Exercise.id == session.exercise_id).first()
-            output.append(build_result_response(result, session, exercise))
-
-    return output
+    rows = (
+        db.query(TypingResult, TypingSession, Exercise)
+        .join(TypingSession, TypingResult.session_id == TypingSession.id)
+        .join(Exercise, TypingSession.exercise_id == Exercise.id)
+        .order_by(TypingResult.id.asc())
+        .all()
+    )
+    return [build_result_response(result, session, exercise) for result, session, exercise in rows]
 
 
 @router.get("/{result_id}", response_model=ResultResponse)

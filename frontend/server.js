@@ -1,6 +1,10 @@
 const express = require("express");
+const http = require("http");
 const path = require("path");
 const fs = require("fs");
+
+const BACKEND_HOST = process.env.BACKEND_HOST || "backend";
+const BACKEND_PORT = parseInt(process.env.BACKEND_PORT || "8000", 10);
 
 const app = express();
 const PORT = 3000;
@@ -42,6 +46,30 @@ function serveHtml(filePath, res) {
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "frontend" });
+});
+
+app.use("/api", (req, res) => {
+  const options = {
+    hostname: BACKEND_HOST,
+    port: BACKEND_PORT,
+    path: req.url || "/",
+    method: req.method,
+    headers: { ...req.headers, host: `${BACKEND_HOST}:${BACKEND_PORT}` },
+  };
+
+  const proxyReq = http.request(options, (proxyRes) => {
+    res.writeHead(proxyRes.statusCode, proxyRes.headers);
+    proxyRes.pipe(res, { end: true });
+  });
+
+  proxyReq.on("error", (err) => {
+    console.error("[proxy] Backend error:", err.message);
+    if (!res.headersSent) {
+      res.status(502).json({ detail: "Backend unavailable" });
+    }
+  });
+
+  req.pipe(proxyReq, { end: true });
 });
 
 // En mode DEV : on intercepte toutes les requêtes HTML avant express.static

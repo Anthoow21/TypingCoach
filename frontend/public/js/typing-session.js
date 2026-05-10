@@ -77,63 +77,87 @@ export class TypingSessionPlayer {
     this.els.liveErrorCount.textContent = String(this.currentErrorCount());
   }
 
-  renderReferenceText() {
-    const referenceChars = Array.from(this.state.currentReferenceText);
-
-    if (!referenceChars.length) {
-      this.els.referenceTextRender.innerHTML = '<span class="empty-state">Lance une session pour commencer.</span>';
-      return;
-    }
-
+  _buildReferenceDOM(referenceChars) {
     const progress = this.currentProgressIndex();
     const locked = this.state.lockedErrorIndex;
 
+    this._charSpans = new Array(referenceChars.length);
+
     const words = [];
     let currentWord = [];
-
     referenceChars.forEach((char, index) => {
       if (char === " ") {
-        if (currentWord.length) {
-          words.push({ type: "word", chars: currentWord });
-          currentWord = [];
-        }
+        if (currentWord.length) { words.push({ type: "word", chars: currentWord }); currentWord = []; }
         words.push({ type: "space", chars: [{ char: " ", index }] });
       } else {
         currentWord.push({ char, index });
       }
     });
+    if (currentWord.length) words.push({ type: "word", chars: currentWord });
 
-    if (currentWord.length) {
-      words.push({ type: "word", chars: currentWord });
+    const fragment = document.createDocumentFragment();
+    words.forEach((token) => {
+      const wordEl = document.createElement("span");
+      wordEl.className = token.type === "space" ? "word space-word" : "word";
+      token.chars.forEach(({ char, index }) => {
+        const isSpace = char === " ";
+        let cls = "char pending";
+        if (index < progress) cls = "char correct";
+        if (locked !== null && index === locked) cls = "char error";
+        else if (index === progress && locked === null) cls = "char current";
+        if (isSpace) cls += " space";
+        const span = document.createElement("span");
+        span.className = cls;
+        span.dataset.index = String(index);
+        span.textContent = isSpace ? " " : char;
+        this._charSpans[index] = span;
+        wordEl.appendChild(span);
+      });
+      fragment.appendChild(wordEl);
+    });
+
+    this.els.referenceTextRender.innerHTML = "";
+    this.els.referenceTextRender.appendChild(fragment);
+    this._renderedText = this.state.currentReferenceText;
+    this._lastProgress = progress;
+    this._lastLocked = locked;
+  }
+
+  renderReferenceText() {
+    const referenceChars = Array.from(this.state.currentReferenceText);
+
+    if (!referenceChars.length) {
+      this.els.referenceTextRender.innerHTML = '<span class="empty-state">Lance une session pour commencer.</span>';
+      this._charSpans = null;
+      this._renderedText = "";
+      return;
     }
 
-    const html = words.map((token) => {
-      const charsHtml = token.chars.map(({ char, index }) => {
-        let cls = "char pending";
-        if (index < progress) {
-          cls = "char correct";
-        }
+    // Rebuild entier si le texte a changé (nouvelle session)
+    if (this.state.currentReferenceText !== this._renderedText) {
+      this._buildReferenceDOM(referenceChars);
+      return;
+    }
 
-        if (locked !== null && index === locked) {
-          cls = "char error";
-        } else if (index === progress && locked === null) {
-          cls = "char current";
-        }
+    // Mise à jour incrémentale : seuls les spans affectés changent de classe
+    const progress = this.currentProgressIndex();
+    const locked = this.state.lockedErrorIndex;
+    const toUpdate = new Set([this._lastProgress, progress, this._lastLocked, locked]);
 
-        const isSpace = char === " ";
-        const safeChar = isSpace ? "&nbsp;" : escapeHtml(char);
-        const extraClass = isSpace ? " space" : "";
-        return `<span class="${cls}${extraClass}" data-index="${index}">${safeChar}</span>`;
-      }).join("");
+    for (const i of toUpdate) {
+      if (i === null || i === undefined || i < 0 || i >= referenceChars.length) continue;
+      const span = this._charSpans[i];
+      if (!span) continue;
+      let cls = "char pending";
+      if (i < progress) cls = "char correct";
+      if (locked !== null && i === locked) cls = "char error";
+      else if (i === progress && locked === null) cls = "char current";
+      if (referenceChars[i] === " ") cls += " space";
+      span.className = cls;
+    }
 
-      if (token.type === "space") {
-        return `<span class="word space-word">${charsHtml}</span>`;
-      }
-
-      return `<span class="word">${charsHtml}</span>`;
-    }).join("");
-
-    this.els.referenceTextRender.innerHTML = html;
+    this._lastProgress = progress;
+    this._lastLocked = locked;
   }
 
   renderResultReplay(referenceText, errorEvents) {
@@ -207,6 +231,10 @@ export class TypingSessionPlayer {
 
   reset() {
     this.state = this.getInitialState();
+    this._charSpans = null;
+    this._renderedText = "";
+    this._lastProgress = -1;
+    this._lastLocked = null;
     this.stopTimer();
     this.els.sessionIdLabel.textContent = "—";
     this.els.timerLabel.textContent = "0.0 s";

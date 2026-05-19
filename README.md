@@ -4,6 +4,12 @@ Application de coaching de frappe au clavier. Elle mesure la vitesse (WPM), la p
 
 ## Architecture
 
+### Patron architectural : Client-Serveur distribué N-tiers
+
+L'application suit un patron **client-serveur distribué à trois niveaux applicatifs** : chaque niveau est client du suivant, la relation d'appel est strictement hiérarchique (le frontend ne contacte jamais la base ni le service Analysis directement).
+
+Ce découpage permet d'isoler le service d'analyse (Rust) dans son propre processus, car son traitement est CPU-bound — calculer des statistiques sur plusieurs centaines d'événements clavier par session. L'exécuter dans le backend Python bloquerait la boucle d'événements. La base de données reste centralisée car le modèle est entièrement relationnel (sessions, résultats, exercices sont liés par des clés étrangères) : une séparation par service n'apporterait ici que de la complexité inutile.
+
 Trois services applicatifs conteneurisés communicant via HTTP synchrone, une base PostgreSQL partagée.
 
 ```
@@ -186,3 +192,33 @@ Le service Analysis (Rust) est interne au réseau Docker et n'est pas exposé en
 ## Dispositions clavier supportées
 
 `azerty` · `qwerty` · `bepo` · `dvorak` · `colemak`
+
+## CI/CD
+
+Le pipeline GitLab CI/CD (`/.gitlab-ci.yml`) couvre quatre étapes :
+
+```
+build → test → package → deploy
+```
+
+| Étape    | Ce qui se passe                                                                                          |
+|----------|----------------------------------------------------------------------------------------------------------|
+| build    | Compilation du binaire Rust (service Analysis) et installation des dépendances Python/Node               |
+| test     | Tests unitaires Python (`pytest`), linting du frontend                                                   |
+| package  | Construction des images Docker via **Kaniko** (sans Docker-in-Docker) et push vers le registry GitLab    |
+| deploy   | Déclenchement du pipeline du dépôt `typing-coach-infra`, qui applique le déploiement via Ansible          |
+
+### Versioning automatique
+
+La version de l'application suit le schéma `{VERSION_PREFIX}.{CI_PIPELINE_IID}`, par exemple `1.0.47`. `CI_PIPELINE_IID` est un compteur auto-incrémenté par GitLab à chaque pipeline ; aucune intervention manuelle n'est requise. La variable `VERSION_PREFIX` (définie dans les variables CI) permet de faire évoluer le numéro majeur/mineur lors d'une release significative.
+
+La version courante est exposée par l'API backend : `GET /version`.
+
+### Branches
+
+| Branche   | Pipeline déclenché                              |
+|-----------|-------------------------------------------------|
+| `develop` | build → test → package → déploiement en **dev**  |
+| `main`    | build → test → package → déploiement en **prod** |
+
+On ne pousse jamais directement sur `main` : les changements passent par une Merge Request depuis `develop`.
